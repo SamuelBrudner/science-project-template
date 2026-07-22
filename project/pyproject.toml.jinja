@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = {{ package_name | tojson }}
+version = "0.1.0"
+description = {{ project_description | tojson }}
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "{{ license }}" }
+authors = [{ name = {{ author | tojson }}, email = {{ author_email | tojson }} }]
+
+# Runtime deps are pinned via conda (environment.yml + conda-lock.yml).
+# Keep this list minimal; it only covers the importable library.
+dependencies = [
+  "numpy",
+  "pandas",
+  "pyarrow",
+  "pydantic>=2",
+  "pydantic-settings>=2",
+  "hydra-core>=1.3",
+  "matplotlib",
+  "loguru",
+  "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "hypothesis",
+  "mutmut",
+  "pytest-benchmark",
+  "mypy",
+  "ruff",
+  "black",
+  "isort",
+  "interrogate",
+  "pre-commit",
+  "commitizen",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# --------------------------------------------------------------------------
+# Formatting / linting / typing
+# --------------------------------------------------------------------------
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+extend-exclude = "exploratory/|docs/tutorial\\.ipynb"
+
+[tool.isort]
+profile = "black"
+# workflow/scripts import first-party packages whose sort order depends on the
+# templated package name (also handled by ruff's per-file-ignores).
+skip_glob = ["exploratory/*", "docs/tutorial.ipynb", "workflow/scripts/*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+# Exploration notebooks + the executed docs tutorial are not library code.
+extend-exclude = ["exploratory", "docs/tutorial.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "NPY", "PD"]
+
+[tool.ruff.lint.per-file-ignores]
+# Snakemake `script:` files import first-party packages whose sort order depends
+# on the (templated) package name, and must set sys.path before importing the
+# top-level `metadata` package. Exempt import-sorting / module-level-import rules.
+"workflow/scripts/*.py" = ["I001", "E402"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src"]
+plugins = ["pydantic.mypy"]
+
+# Scientific libraries without bundled type stubs: don't fail strict on imports.
+[[tool.mypy.overrides]]
+module = ["pandas.*", "matplotlib.*", "yaml", "scipy.*", "snakemake.*"]
+ignore_missing_imports = true
+
+[tool.interrogate]
+fail-under = 90
+ignore-init-module = true
+ignore-magic = true
+
+[tool.pytest.ini_options]
+addopts = "-q --cov={{ package_name }} --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.coverage.report]
+# Pure-function target is 90%; overall gate 70% (see docs/structure.md §5).
+fail_under = 70
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+# Single version source: cz bump keeps all of these in lockstep.
+version_files = [
+  "pyproject.toml:^version",
+  "src/{{ package_name }}/__init__.py:__version__",
+  "CITATION.cff:^version",
+]
+update_changelog_on_bump = true

@@ -1,0 +1,19 @@
+# `metadata/` — Schemas & sample manifests
+
+The bridge from bench to bytes. This is where physical samples connect to data
+files, validated so provenance is traceable end to end.
+
+## What belongs here
+- `schemas.py` — Pydantic models defining every metadata table (the contract).
+- Sample manifests: `sample_id → condition → data file`, as validated CSVs.
+- `samples.example.csv` — one small, valid example row set. **Not fake bulk data.**
+
+## Rules
+- Every manifest must validate against a schema in `schemas.py`. CI enforces this;
+  an invalid manifest fails the build (fail loud, fail fast).
+- Manifests are the **source of truth for what raw files exist** — the pipeline
+  reads them to find inputs. A file in `data/raw/` with no manifest row is invisible.
+- Small enough to track directly in git (unlike `data/`, which uses
+  {{ data_versioning }}).
+
+Change the schema → update `schemas.py`, then fix every manifest until CI is green.

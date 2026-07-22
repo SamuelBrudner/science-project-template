@@ -1,0 +1,80 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "0",
+   "metadata": {},
+   "source": [
+    "# Tutorial\n",
+    "\n",
+    "This notebook is **executed when the docs build** (mkdocs-jupyter), so it can't\n",
+    "drift from the code. Throwaway scratch lives in `exploratory/`; this is curated,\n",
+    "kept-true narrative."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from {{ package_name }}.seed_manager import get_rng\n",
+    "\n",
+    "rng = get_rng(0)\n",
+    "rng.integers(0, 100, size=5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from {{ package_name }} import theming\n",
+    "\n",
+    "base = {\n",
+    "    \"roles\": [\"background\", \"foreground\", \"accent\"],\n",
+    "    \"fonts\": {\"family\": \"DejaVu Sans\", \"base_pt\": 8, \"tick_pt\": 7, \"legend_pt\": 7},\n",
+    "    \"figure\": {\"width_in\": 3.5, \"height_in\": 2.5, \"dpi\": 300, \"spine_pt\": 0.6, \"tick_len_pt\": 3.5, \"tick_width_pt\": 0.5, \"line_pt\": 1.2, \"marker_pt\": 4.5},\n",
+    "}\n",
+    "light = {\"background\": \"#FFFFFF\", \"foreground\": \"#1A1A1A\", \"accent\": \"#0072B2\"}\n",
+    "dark = {\"background\": \"#00000000\", \"foreground\": \"#EAEAEA\", \"accent\": \"#56B4E9\"}\n",
+    "theme = theming.load_theme(base, light, dark)\n",
+    "print(theming.render_mplstyle(theme, \"light\").splitlines()[0])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import tempfile\n",
+    "from pathlib import Path\n",
+    "\n",
+    "from {{ package_name }} import catalog\n",
+    "\n",
+    "tmp = Path(tempfile.mkdtemp())\n",
+    "(tmp / \"s.csv\").write_text(\"id,signal\\n1,0.5\\n2,0.7\\n\")\n",
+    "cat = catalog.Catalog(datasets={\"samples\": {\"path\": str(tmp / \"s.csv\"), \"format\": \"csv\"}})\n",
+    "print(\"samples ->\", catalog.dataset_path(\"samples\", cat))\n",
+    "catalog.load_dataset(\"samples\", cat)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

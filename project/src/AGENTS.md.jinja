@@ -1,0 +1,30 @@
+# AGENTS.md — `src/{{ package_name }}/` (library layer)
+
+This is the pure, installable, tested library. Code here outlives the paper. Root
+`../AGENTS.md` still applies; these are the additional rules for library code.
+
+## Rules
+- **No I/O, no analysis orchestration here.** Reading files, writing figures, and
+  wiring stages belong in `workflow/`. This layer is functions on data in memory.
+- **Pure and small.** Functions ≤ 15 LOC (excluding docstrings). Prefer many small
+  composable functions over one large one.
+- **Typed.** `mypy --strict` must pass; every public function has type hints and a
+  numpydoc docstring (`interrogate` enforces coverage).
+- **Vectorize.** Delegate to idiomatic numpy/pandas/scipy; avoid hand-rolled loops
+  over arrays. Reach for numba only when profiling justifies it.
+- **`pathlib.Path` only** for paths (when a function must take one) — never `os.path`.
+- **Determinism.** Any stochastic function takes an explicit seed/`Generator`
+  argument; never reads a global RNG.
+
+## Workflow (TDD, non-negotiable)
+Red → green → refactor. Write the failing test first.
+```bash
+pytest tests/ -q                 # unit tests
+pytest --hypothesis-show-statistics   # property-based tests on numeric kernels
+```
+Coverage target: **≥ 90%** for pure functions. Critical math kernels get
+`hypothesis` property tests and are candidates for `mutmut` mutation testing.
+
+## Before you finish
+- New public function → test + docstring + type hints, or it's not done.
+- `pre-commit run --all-files` is green.

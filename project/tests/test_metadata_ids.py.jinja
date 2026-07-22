@@ -1,0 +1,64 @@
+"""Leading-zero / numeric-looking sample IDs must survive as strings.
+
+Regression: pandas silently reads ``001`` as int ``1`` unless dtype + NA parsing
+are pinned. The pipeline reads the manifest and qc_summary with
+``dtype={"sample_id": str}, keep_default_na=False`` — this test locks that
+contract at the read boundary and through the schema. Delete with the example.
+"""
+
+import os
+import sys
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+
+def _read(path: Path) -> pd.DataFrame:
+    """Read a manifest the way the pipeline does (ids stay strings)."""
+    return pd.read_csv(path, dtype=str, keep_default_na=False)
+
+
+def test_leading_zero_id_survives_read(tmp_path: Path) -> None:
+    m = tmp_path / "samples.csv"
+    m.write_text("sample_id,condition,file\n001,NA,data/001.csv\n")
+    manifest = _read(m)
+    assert manifest["sample_id"].iloc[0] == "001"  # not int 1
+    assert manifest["condition"].iloc[0] == "NA"  # not NaN
+
+
+def test_schema_keeps_string_id() -> None:
+    sys.path.insert(0, os.getcwd())  # top-level `metadata` package
+    from metadata.schemas import SampleRecord
+
+    rec = SampleRecord(sample_id="001", condition="control", file="data/001.csv")
+    assert rec.sample_id == "001"
+
+
+def test_qc_summary_id_stays_string(tmp_path: Path) -> None:
+    q = tmp_path / "qc_summary.csv"
+    q.write_text(
+        "sample_id,condition,n,n_missing,mean,sd,qc_pass\n007,c,3,0,1.0,0.1,True\n"
+    )
+    summary = pd.read_csv(q, dtype={"sample_id": str}, keep_default_na=False)
+    assert summary["sample_id"].iloc[0] == "007"
+    assert bool(summary["qc_pass"].iloc[0]) is True  # numeric/bool columns still typed
+    assert int(summary["n"].iloc[0]) == 3
+
+
+@pytest.mark.parametrize(
+    "bad", ["../escape", "a/b", "..", "foo/../bar", "abc\n", ".hidden", ""]
+)
+def test_schema_rejects_unsafe_ids(bad: str) -> None:
+    """Path-traversal or newline-bearing ids are rejected (fullmatch, not match).
+
+    ``"abc\\n"`` is the key case: ``$`` with ``re.match`` accepts a trailing
+    newline, so the validator uses ``fullmatch`` to require the whole string.
+    """
+    sys.path.insert(0, os.getcwd())
+    from pydantic import ValidationError
+
+    from metadata.schemas import SampleRecord
+
+    with pytest.raises(ValidationError):
+        SampleRecord(sample_id=bad, condition="c", file="f.csv")

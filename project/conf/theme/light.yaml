@@ -1,0 +1,7 @@
+# Light palette — CANONICAL (print / papers). Okabe-Ito colourblind-safe.
+background: "#FFFFFF"
+foreground: "#1A1A1A"
+muted: "#6E6E6E"
+accent: "#0072B2"       # blue
+condition_A: "#009E73"  # green
+condition_B: "#D55E00"  # vermillion

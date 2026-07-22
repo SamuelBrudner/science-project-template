@@ -1,0 +1,142 @@
+# {{ project_name }}
+
+> {{ project_description or "Research project." }}
+>
+> **Status:** alpha · **Maintainer:** {{ author }}{% if orcid %} ([{{ orcid }}]({{ orcid }})){% endif %} · **License:** {{ license }}
+
+This README is a **map of the repository**, not a description of the science.
+It tells you how to set up, how to reproduce every result, where each kind of
+file lives, and — importantly — what you must not touch. For the scientific
+background see `docs/`. For step-by-step reproduction see `REPRODUCE.md`.
+
+---
+
+## Quickstart
+
+```bash
+# 1. Environment
+conda env create -f environment.yml -p ./conda_env
+conda activate ./conda_env
+pip install -e ".[dev]"
+pre-commit install
+
+# 2. Data (not stored in git). First time: bootstrap DVC, then pull once a
+#    remote + data exist. See scripts/setup_data.sh and REPRODUCE.md.
+bash scripts/setup_data.sh
+# {{ data_versioning }} pull
+
+# 3. Build the pipeline targets
+snakemake --cores 1                                # on a workstation
+{% if compute_backend == "slurm" %}# snakemake --profile workflow/profiles/slurm   # on the cluster
+{% endif %}
+```
+{% if include_example %}
+Step 3 reproduces the bundled example end to end (manifest → per-sample QC →
+aggregation → light/dark figures → provenance). If it doesn't reproduce the
+figures, that's a bug — reproducibility is the point of this layout.
+{%- else %}
+This is a skeleton: `snakemake --cores 1` builds the resolved config, the theme
+assets, and `results/provenance.json`. It does **not** yet produce QC, tables, or
+figures — you add those stages (see `workflow/README.md` and `docs/structure.md`).
+Once your DAG reproduces your figures from `data/raw/`, that's the bar to hold.
+{%- endif %}
+
+---
+
+## Where things live
+
+The repo has **four layers**, ordered from slowest-changing to fastest. Read this
+table before you add or move a file.
+
+| Directory | Layer | What goes here | Edit by hand? |
+|-----------|-------|----------------|:-------------:|
+| `src/{{ package_name }}/` | **Library** | Pure, typed, tested functions. No I/O, no analysis scripts. | ✅ (with tests) |
+| `workflow/` | **Pipeline** | Snakemake rules + thin entrypoints that wire `src/` to configs. No business logic. | ✅ |
+| `conf/` | Config | Hydra tree (all parameters, no magic numbers) + `conf/theme/` (colors/fonts). | ✅ |
+| `data/raw/` | **Data (in)** | Raw measurements. **Immutable, read-only.** Tracked by {{ data_versioning }}, not git. | ⛔ never |
+| `data/interim`, `data/processed` | Data | Regenerable pipeline intermediates. | ⛔ (regenerated) |
+| `metadata/` | Data | Pydantic-validated schemas: sample_id → condition → file. | ✅ |
+| `assets/figures/` | **Figures (in)** | **Authored** figures: schematics, BioRender/Illustrator/SVG source. Git-tracked. | ✅ |
+| `results/figures/` | **Figures (out)** | **Generated** figures from the pipeline (`light/` + `dark/`). Gitignored. | ⛔ never |
+| `results/tables/` | Results | Generated tables. Gitignored. | ⛔ (regenerated) |
+| `reporting/` | **Reporting** | Papers, posters, slides, writeups. Reference figures, don't copy them. | ✅ |
+| `exploratory/` | — | **Scratch** notebooks — disposable, unlinted, nothing load-bearing. | ✅ (throwaway) |
+| `docs/` | — | Docs site + an **executed** narrative tutorial (kept true on every build). | ✅ |
+| `lab/` | — | Protocols, sample manifests. Human/ELN territory. | ✅ (humans) |
+| `tests/` | — | Unit/property tests. | ✅ |
+
+---
+
+## Where do I put / find a figure?
+
+The one question that decides everything: **can code regenerate it?**
+
+- **Yes — a plot the pipeline makes from data** → it belongs in `results/figures/`.
+  It is a *build target*: gitignored, regenerated on every run. **Never edit it by
+  hand — your changes will be silently overwritten.** To change it, edit the
+  plotting code in `src/` or a config in `conf/` and rerun.
+- **No — a human drew it** (schematic, experimental design, BioRender export) →
+  it belongs in `assets/figures/`. It is a *source input*: git-tracked, precious.
+  Keep the editable source (`.svg`/`.ai`) next to any exported PDF.
+
+**Composite plates** (schematic panel + generated panels): prefer assembling them
+programmatically in a pipeline stage (reads `assets/` + `results/`, writes a new
+plate to `results/figures/` — fully regenerable). If assembled by hand instead,
+the plate becomes a source asset in `assets/figures/` and loses regenerability —
+an acceptable trade for complex schematics, made deliberately.
+
+Light vs dark: `results/figures/light/` is canonical (for print/papers);
+`results/figures/dark/` is derived for on-screen slides (transparent background).
+Both come from the same code and the theme in `conf/theme/`.
+
+---
+
+## Golden rules (the invariants)
+
+1. **`data/raw/` and `results/` are never hand-edited.** Raw is immutable input;
+   results are regenerable output. Everything reproducible flows between them.
+2. **Scratch notebooks (`exploratory/`) are disposable; narrative lives in `docs/`.**
+   The moment a scratch notebook produces something real, move that code into
+   `src/` and call it from a stage. A tutorial that must stay true is an *executed*
+   docs page, not a scratch notebook.
+3. **No magic numbers.** Every parameter lives in `conf/` (Hydra, Pydantic-validated).
+4. **Work on a branch, PR into `main`.** CI runs `pre-commit run --all-files`;
+   merges are blocked otherwise.
+5. **Figures are build targets.** A reviewer's "redo this excluding subject 3" is
+   a config change + rerun, not manual editing.
+6. **Seeds are deterministic** (`src/{{ package_name }}/seed_manager.py`); seeds
+   are recorded in logs.
+7. **On HPC, never run plain Python on a login node** — submit through the SLURM
+   profile (Snakemake runs each job in the container when Apptainer is enabled).
+8. **Agents suggest and stage; a human commits.** Data mutations, `main` merges,
+   provenance records, and manuscript prose are human-gated. See `AGENTS.md`.
+
+---
+
+## Reproducing a specific result
+
+Every figure/table is a named pipeline target:
+
+```bash
+{% if include_example %}snakemake results/figures/light/example_group_means.pdf   # rebuild one figure
+{% else %}# once you've added figure rules, target them by output path, e.g.:
+# snakemake results/figures/light/fig3.pdf
+{% endif %}snakemake --list                                # see all targets
+```
+
+Full environment-up reproduction, including data and container details, is in
+[`REPRODUCE.md`](REPRODUCE.md).
+
+---
+
+## Contributing & citing
+
+- Setup, branch/PR workflow, and review checklist: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Code of conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- How to cite this work: [`CITATION.cff`](CITATION.cff)
+- Machine-readable metadata: `codemeta.json`
+
+## Layout reference
+
+The full design rationale for this structure (four layers, template variables,
+AGENTS.md, reporting, theme system) is in `docs/structure.md`.

@@ -1,0 +1,31 @@
+# AGENTS.md — `workflow/` (pipeline layer)
+
+The declarative DAG from `data/raw/` → `results/`. Root `../AGENTS.md` applies;
+these are the pipeline-specific rules. Human orientation: [`README.md`](README.md).
+
+## Rules
+- **No business logic here.** `scripts/` entrypoints only: read a Hydra config from
+  `../conf/`, call a tested function from `../src/{{ package_name }}/`, write output.
+  If you're writing an algorithm, stop — it goes in `src/` with tests.
+- **Declare I/O explicitly.** Every rule states its inputs and outputs so the DAG is
+  correct and stages are cache-valid. No undeclared side-effect writes.
+- **Outputs go to `results/`** (figures to `results/figures/{light,dark}/`, tables
+  to `results/tables/`). Never write into `data/raw/`.
+- **Config, not constants.** Parameters come from `../conf/`; don't hardcode paths,
+  thresholds, or seeds in a script.
+
+## Adding a stage
+1. Tested function in `../src/`.
+2. Thin entrypoint in `scripts/` (Hydra config in, `src/` call, file out).
+3. Rule in `rules/` declaring inputs/outputs.
+4. `snakemake --list` shows the new target; `snakemake <target>` builds it.
+
+## Running
+```bash
+snakemake --cores 1                    # workstation
+{% if compute_backend == "slurm" %}snakemake --profile workflow/profiles/slurm   # HPC, never plain Python on a login node
+{% endif %}snakemake -n <target>                  # dry run: check the DAG before executing
+```
+
+Figures are build targets: to change one, edit `src/` plotting code or a
+`conf/theme/` value and rerun — never touch the file in `results/`.

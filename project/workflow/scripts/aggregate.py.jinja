@@ -1,0 +1,45 @@
+"""Aggregate QC-passed samples to ONE value each (the independent unit).
+
+Each sample is reduced to its mean, so downstream statistics treat the sample --
+not the individual measurement -- as the unit of replication (avoids
+pseudoreplication). QC-failed samples are excluded EXPLICITLY and recorded. The
+stage FAILS LOUD (via {{ package_name }}.qc.underpowered_conditions) if any
+condition lacks the required number of passing samples, so a run can never
+publish an empty or under-powered figure.
+No `from __future__` import (Snakemake prepends a preamble to script: files).
+"""
+
+import json
+from pathlib import Path
+
+import pandas as pd
+import yaml
+
+from {{ package_name }}.qc import underpowered_conditions
+
+snakemake = snakemake  # noqa: F821
+
+cfg = yaml.safe_load(Path(snakemake.input.config).read_text())
+value_col = cfg["example"]["value_col"]
+group_col = cfg["example"]["group_col"]
+
+qc = pd.DataFrame(json.loads(Path(p).read_text()) for p in snakemake.input.qc)
+qc.to_csv(snakemake.output.qc_summary, index=False)
+
+excluded = sorted(qc.loc[~qc["qc_pass"], "sample_id"].tolist())
+if excluded:
+    print(f"[aggregate] EXCLUDED {len(excluded)} QC-failed sample(s): {excluded}")
+Path(snakemake.output.excluded).write_text(json.dumps(excluded, indent=2))
+
+short = underpowered_conditions(qc, cfg["qc"]["min_samples_per_condition"])
+if short:
+    raise ValueError(
+        f"insufficient passing samples per condition "
+        f"(need >= {cfg['qc']['min_samples_per_condition']}): {short}; "
+        f"excluded={excluded}"
+    )
+
+# One row per PASSING sample: its per-sample mean is the independent-unit value.
+passed = qc.loc[qc["qc_pass"], ["sample_id", "condition", "mean"]]
+tidy = passed.rename(columns={"mean": value_col})[["sample_id", group_col, value_col]]
+tidy.to_parquet(snakemake.output.table, index=False)

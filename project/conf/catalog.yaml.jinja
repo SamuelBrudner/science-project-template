@@ -1,0 +1,23 @@
+# Data catalog — logical dataset names -> location + format (validated by
+# {{ package_name }}.catalog). Load by name instead of hard-coding paths:
+#
+#     from {{ package_name }}.catalog import load_dataset
+#     manifest = load_dataset("sample_manifest")
+#
+# Snakemake rules keep declaring explicit inputs/outputs (that's what makes the
+# DAG correct); this catalog is for ad-hoc / notebook / library access.
+datasets:
+  sample_manifest:
+    path: metadata/samples.example.csv
+    format: csv
+{%- if include_example %}
+  measurements:
+    path: results/tables/measurements.parquet
+    format: parquet
+  qc_summary:
+    path: results/qc/qc_summary.csv
+    format: csv
+  provenance:
+    path: results/provenance.json
+    format: json
+{%- endif %}

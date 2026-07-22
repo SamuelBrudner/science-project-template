@@ -1,0 +1,45 @@
+"""Tests for the lightweight data catalog."""
+
+from pathlib import Path
+
+import pytest
+
+from {{ package_name }} import catalog
+
+CAT = {
+    "datasets": {
+        "samples": {"path": "s.csv", "format": "csv"},
+        "table": {"path": "t.parquet", "format": "parquet"},
+    }
+}
+
+
+def test_load_catalog_ok() -> None:
+    cat = catalog.Catalog(**CAT)
+    assert set(cat.datasets) == {"samples", "table"}
+
+
+def test_dataset_path_by_name() -> None:
+    cat = catalog.Catalog(**CAT)
+    assert catalog.dataset_path("table", cat).name == "t.parquet"
+
+
+def test_unknown_dataset_fails_loud() -> None:
+    cat = catalog.Catalog(**CAT)
+    with pytest.raises(KeyError, match="unknown dataset"):
+        catalog.dataset_path("missing", cat)
+
+
+def test_unsupported_format_fails_loud(tmp_path: Path) -> None:
+    p = tmp_path / "catalog.yaml"
+    p.write_text("datasets:\n  x:\n    path: x.txt\n    format: txt\n")
+    with pytest.raises(ValueError, match="unsupported format"):
+        catalog.load_catalog(p)
+
+
+def test_load_dataset_csv(tmp_path: Path) -> None:
+    csv = tmp_path / "s.csv"
+    csv.write_text("a,b\n1,2\n")
+    cat = catalog.Catalog(datasets={"s": {"path": str(csv), "format": "csv"}})
+    frame = catalog.load_dataset("s", cat)
+    assert list(frame.columns) == ["a", "b"]

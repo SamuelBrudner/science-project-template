@@ -1,0 +1,25 @@
+# `data/raw/` — Raw data (IMMUTABLE)
+
+Original, unmodified measurements. This is the ground truth everything else is
+derived from.
+
+**The one rule: never modify or delete anything in here.** Not to fix a typo, not
+to reformat, not to drop a bad sample. Raw stays raw. Corrections and exclusions
+happen downstream in the pipeline (`workflow/`) and are recorded in config, so
+they are visible, reversible, and reproducible.
+
+## What belongs here
+- Instrument output exactly as produced.
+- Files registered in a `metadata/` sample manifest.
+
+## What does NOT belong here
+- Anything a script produced → `data/interim/` or `data/processed/`.
+- Cleaned, renamed, or reformatted copies → those are pipeline outputs.
+
+## Housekeeping
+- Tracked by **{{ data_versioning }}**, not git. Run `{{ data_versioning }} pull`
+  to populate. Never `git add` data files.
+- This folder is read-only by convention; the pipeline reads from it and writes
+  elsewhere.
+
+See the sample manifest schema in [`../../metadata/`](../../metadata/).

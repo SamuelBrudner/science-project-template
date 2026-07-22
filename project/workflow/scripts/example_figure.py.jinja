@@ -1,0 +1,77 @@
+"""Example entrypoint: per-sample table + resolved config -> themed figure.
+
+Statistics use the SAMPLE as the unit of replication (one point per sample), so
+n = number of samples per condition, not number of measurements. The kernel is
+{{ package_name }}.example.group_stats. All parameters come from the resolved
+config (no hardcoded fallbacks). No `from __future__` import (Snakemake prepends
+a preamble to script: files).
+"""
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+import yaml  # noqa: E402
+
+from {{ package_name }}.example import group_stats  # noqa: E402
+from {{ package_name }}.plotting import panel_label  # noqa: E402
+
+snakemake = snakemake  # noqa: F821
+
+cfg = yaml.safe_load(open(snakemake.input.config))
+ex = cfg["example"]
+seed = cfg["seed"]
+per_sample = pd.read_parquet(snakemake.input.table)  # one row per sample
+stats = group_stats(per_sample, ex["value_col"], ex["group_col"])
+groups = stats[ex["group_col"]].tolist()
+
+
+def plot(style: str, out_pdf: str, out_png: str) -> None:
+    """Bars = mean±SEM across samples; points = individual sample means."""
+    rng = np.random.default_rng(seed)  # deterministic jitter
+    with matplotlib.style.context(style):
+        fg = plt.rcParams["text.color"]
+        fig, ax = plt.subplots()
+        x = np.arange(len(groups))
+        # One themed colour per condition, drawn from conf/theme's prop_cycle
+        # (C0=accent, C1=condition_A, C2=condition_B, ...).
+        bar_colors = [f"C{i}" for i in range(len(groups))]
+        ax.bar(
+            x,
+            stats["mean"],
+            yerr=stats["sem"],
+            capsize=3,
+            ecolor=fg,
+            color=bar_colors,
+            zorder=1,
+        )
+        for i, g in enumerate(groups):
+            ys = per_sample.loc[
+                per_sample[ex["group_col"]] == g, ex["value_col"]
+            ].to_numpy()
+            ax.scatter(
+                i + rng.uniform(-0.12, 0.12, ys.size),
+                ys,
+                s=18,
+                color=fg,
+                alpha=0.8,
+                zorder=2,
+            )
+        ax.set_xticks(x)
+        labels = [
+            f"{g}\n(n={n} samples)" for g, n in zip(groups, stats["n"], strict=True)
+        ]
+        ax.set_xticklabels(labels)
+        ax.set_xlabel(ex["group_col"])
+        ax.set_ylabel(f"per-sample mean {ex['value_col']} ({ex['units']})")
+        panel_label(ax, "a")
+        fig.tight_layout()
+        fig.savefig(out_pdf, metadata={"CreationDate": None})  # deterministic PDF
+        fig.savefig(out_png)
+        plt.close(fig)
+
+
+plot(snakemake.input.mpl_light, snakemake.output.light_pdf, snakemake.output.light_png)
+plot(snakemake.input.mpl_dark, snakemake.output.dark_pdf, snakemake.output.dark_png)

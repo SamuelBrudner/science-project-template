@@ -1,0 +1,62 @@
+name: {{ package_name }}
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11        # pinned minor: matches mypy target; avoids resolver drift
+  # core scientific stack
+  - numpy
+  - pandas
+  - scipy
+  - pyarrow            # parquet
+  - matplotlib-base
+  - loguru
+  # config & validation
+  - hydra-core>=1.3
+  - pydantic>=2
+  - pydantic-settings>=2
+  # workflow
+  - snakemake-minimal>=8
+{%- if compute_backend == "slurm" %}
+  - snakemake-executor-plugin-slurm
+{%- endif %}
+  - dvc
+  # docs
+{%- if docs_backend == "sphinx" %}
+  - sphinx
+  - numpydoc
+  - furo
+  - myst-nb          # executes docs/tutorial.md at build time
+{%- else %}
+  - mkdocs-material
+  - mkdocs-jupyter   # executes docs/tutorial.ipynb at build time
+{%- endif %}
+{%- if notebook_tool == "marimo" %}
+  # exploration notebooks (pure-.py, reactive, git-friendly)
+  - marimo
+{%- elif notebook_tool == "jupyter" %}
+  # exploration notebooks (strip outputs before commit — see .pre-commit-config)
+  - jupyterlab
+  - ipykernel
+  - nbstripout
+{%- endif %}
+{%- if docs_backend == "mkdocs" and notebook_tool != "jupyter" %}
+  # docs/tutorial.ipynb is stripped in pre-commit regardless of scratch tool
+  - nbstripout
+{%- endif %}
+  # dev / QA
+  - pytest
+  - pytest-cov
+  - hypothesis
+  - mypy
+  - ruff
+  - black
+  - isort
+  - interrogate
+  - pre-commit
+  - commitizen
+  - conda-lock
+  - pip
+  - pip:
+      - mutmut
+      - pytest-benchmark

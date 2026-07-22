@@ -1,0 +1,20 @@
+# funding.yaml — single source of truth for grant / funding metadata.
+#
+# Referenced by codemeta.json and (by hand, for now) the paper acknowledgement.
+# Validated by metadata.schemas.Funding. Change a grant number here once.
+#
+# The `acknowledgement` string is HUMAN-OWNED — it appears in publications.
+# Agents may draft it, but a person commits it.
+
+awards:
+  - funder: "REPLACE - funding agency"
+    funder_ror: ""                    # e.g. https://ror.org/01cwqze88
+    program: ""
+    award_id: "REPLACE-AWARD-ID"
+    award_title: {{ project_name | tojson }}
+    recipient_orcid: {{ orcid | tojson }}
+    start: "YYYY-MM-DD"
+    end: "YYYY-MM-DD"
+
+# Canonical acknowledgement used verbatim in manuscripts, posters, and writeups.
+acknowledgement: {{ ("This work was supported by REPLACE-FUNDER (grant REPLACE-AWARD-ID to " ~ author ~ ").") | tojson }}

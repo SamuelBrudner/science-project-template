@@ -1,0 +1,35 @@
+% Example Beamer deck — dark theme figures + generated theme colours.
+% Build from repo root:  make -C reporting slides
+% Delete this example once a real deck exists.
+\documentclass{beamer}
+% Font policy is SHARED with lab.cls — see reporting/_assets/fonts.tex (Beamer
+% uses the SANS family, which fonts.tex sets). Resolved via TEXINPUTS.
+\input{fonts.tex}
+\usepackage{graphicx}
+{% raw %}\graphicspath{{results/figures/dark/}}{% endraw %}
+
+% Generated dark-mode colours (TEXINPUTS=reporting/_assets:).
+\IfFileExists{theme-colors-dark.tex}{\input{theme-colors-dark.tex}}{}
+\setbeamercolor{normal text}{fg=foreground, bg=background}
+% Beamer's DEFAULT title/structure colour is a dark blue — unreadable on the dark
+% background (~2.3:1). Drive titles/headings from the theme instead: the light
+% `foreground` for titles/headings (high contrast) and the bright `accent` for
+% structural elements (bullets, blocks). Both are colour-blind-safe on dark.
+\setbeamercolor{titlelike}{fg=foreground}
+\setbeamercolor{frametitle}{fg=foreground}
+\setbeamercolor{framesubtitle}{fg=foreground}
+\setbeamercolor{structure}{fg=accent}
+
+\title{ {{- project_name_tex -}} }
+\author{ {{- author_tex -}} }
+\date{}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Results}
+  \centering
+  \includegraphics[width=0.7\linewidth]{example_group_means}
+\end{frame}
+
+\end{document}

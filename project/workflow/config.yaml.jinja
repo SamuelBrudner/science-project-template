@@ -1,0 +1,16 @@
+# Thin Snakemake config: paths, sample source, wildcards, resource hints.
+# Scientific parameters live in conf/ (Hydra), NOT here.
+
+sample_manifest: "metadata/samples.example.csv"
+
+paths:
+  raw: "data/raw"
+  interim: "data/interim"
+  processed: "data/processed"
+  figures_light: "results/figures/light"
+  figures_dark: "results/figures/dark"
+
+# Default per-rule resources (overridden by the slurm profile).
+resources:
+  mem_mb: 2000
+  runtime: 30

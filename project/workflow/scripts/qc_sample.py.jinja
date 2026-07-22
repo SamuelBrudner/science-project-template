@@ -1,0 +1,30 @@
+"""Per-sample QC: compute machine-readable metrics and a pass/fail flag.
+
+Thin wrapper over {{ package_name }}.qc.summarize_sample (unit-tested). Emits one
+validated SampleQC JSON per sample. No `from __future__` import (Snakemake
+prepends a preamble to script: files).
+"""
+
+import os
+import sys
+from pathlib import Path
+
+import pandas as pd
+import yaml
+
+sys.path.insert(0, os.getcwd())  # repo root, so top-level `metadata` imports
+from metadata.schemas import SampleQC  # noqa: E402
+from {{ package_name }}.qc import summarize_sample  # noqa: E402
+
+snakemake = snakemake  # noqa: F821
+
+cfg = yaml.safe_load(Path(snakemake.input.config).read_text())
+values = pd.read_csv(snakemake.input.raw)[cfg["example"]["value_col"]]
+metrics = summarize_sample(values, cfg["qc"]["min_n"])
+
+qc = SampleQC(
+    sample_id=snakemake.params.sample,
+    condition=snakemake.params.condition,
+    **metrics,
+)
+Path(snakemake.output.qc).write_text(qc.model_dump_json(indent=2))

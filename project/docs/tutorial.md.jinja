@@ -1,0 +1,77 @@
+---
+file_format: mystnb
+kernelspec:
+  name: python3
+  display_name: Python 3
+---
+
+# Tutorial
+
+This page is **executed every time the docs build** (via MyST-NB). If the API
+below changes, `sphinx-build` fails — so this narrative can never silently drift
+from the code. (Throwaway scratch lives in `exploratory/`; this is the curated,
+kept-true explanation.)
+
+## Deterministic randomness
+
+```{code-cell} ipython3
+from {{ package_name }}.seed_manager import get_rng
+
+rng = get_rng(0)
+rng.integers(0, 100, size=5)
+```
+
+## The theme is a single source of truth
+
+Colours and figure geometry come from `conf/theme/`. The library validates them
+(every role present in both light and dark) and renders a Matplotlib style:
+
+```{code-cell} ipython3
+from {{ package_name }} import theming
+
+base = {
+    "roles": ["background", "foreground", "accent"],
+    "fonts": {"family": "DejaVu Sans", "base_pt": 8,
+              "tick_pt": 7, "legend_pt": 7},
+    "figure": {"width_in": 3.5, "height_in": 2.5, "dpi": 300, "spine_pt": 0.6,
+               "tick_len_pt": 3.5, "tick_width_pt": 0.5, "line_pt": 1.2,
+               "marker_pt": 4.5},
+}
+light = {"background": "#FFFFFF", "foreground": "#1A1A1A", "accent": "#0072B2"}
+dark = {"background": "#00000000", "foreground": "#EAEAEA", "accent": "#56B4E9"}
+
+theme = theming.load_theme(base, light, dark)
+print(theming.render_mplstyle(theme, "light").splitlines()[0])
+```
+
+## Load data by name (the catalog)
+
+Datasets are named once in `conf/catalog.yaml`, so code loads them by name — e.g.
+`load_dataset("measurements")` — instead of hard-coding paths and formats. Here is
+the API on a self-contained example:
+
+```{code-cell} ipython3
+import tempfile
+from pathlib import Path
+
+from {{ package_name }} import catalog
+
+tmp = Path(tempfile.mkdtemp())
+(tmp / "s.csv").write_text("id,signal\n1,0.5\n2,0.7\n")
+cat = catalog.Catalog(datasets={"samples": {"path": str(tmp / "s.csv"), "format": "csv"}})
+print("samples ->", catalog.dataset_path("samples", cat))
+catalog.load_dataset("samples", cat)
+```
+
+## A themed figure
+
+```{code-cell} ipython3
+import matplotlib.pyplot as plt
+
+with plt.style.context({"axes.prop_cycle": plt.cycler(color=["#0072B2"])}):
+    fig, ax = plt.subplots(figsize=(3.5, 2.5))
+    ax.plot(rng.normal(size=50).cumsum())
+    ax.set_xlabel("step")
+    ax.set_ylabel("value")
+fig
+```

@@ -1,0 +1,8 @@
+# Dark palette — DERIVED (screen / slides). Transparent background so figures
+# drop onto any slide colour. Brighter role colours for dark backgrounds.
+background: "#00000000"   # transparent (8-digit hex)
+foreground: "#EAEAEA"
+muted: "#9A9A9A"
+accent: "#56B4E9"        # sky blue
+condition_A: "#00D6A0"   # green
+condition_B: "#FF7A33"   # orange

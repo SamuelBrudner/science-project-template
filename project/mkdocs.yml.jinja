@@ -1,0 +1,13 @@
+site_name: {{ project_name | tojson }}
+theme:
+  name: material
+docs_dir: docs
+plugins:
+  - search
+  - mkdocs-jupyter:
+      execute: true          # run docs/tutorial.ipynb at build (fail on error)
+      allow_errors: false
+nav:
+  - Home: index.md
+  - Tutorial: tutorial.ipynb
+  - Structure: structure.md

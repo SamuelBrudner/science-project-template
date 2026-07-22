@@ -1,0 +1,34 @@
+# Theme base — role names + typography + figure geometry (SSOT).
+# light.yaml / dark.yaml must define a colour for every role listed here.
+roles:
+  - background
+  - foreground
+  - muted
+  - accent
+  - condition_A
+  - condition_B
+# DejaVu Sans ships with Matplotlib, so figures render identically everywhere.
+# For a publication font (e.g. a Helvetica/Arial clone), install it in the env
+# and in the container, then set it here — and match it in reporting/_assets/fonts.tex
+# (the shared font policy used by both lab.cls and the Beamer deck).
+#
+# Sizes follow a Nature-INSPIRED single-column figure spec (see docs/structure.md).
+# Not a certified match: verify your target journal's current spec (Nature now
+# specifies ~5-7 pt text and prefers Arial/Helvetica) before submission —
+# https://research-figure-guide.nature.com/figures/
+fonts:
+  family: "DejaVu Sans"
+  base_pt: 8       # axis label size
+  tick_pt: 7       # tick label size
+  legend_pt: 7     # legend text size
+  # Panel-letter size is derived (base_pt + 1) by plotting.panel_label — not a
+  # separate knob, so typography stays single-source.
+figure:
+  width_in: 3.5    # 1-column; use 7.0 x 5.0 for a 2-column figure
+  height_in: 2.5
+  dpi: 300
+  spine_pt: 0.6    # remaining (left/bottom) spine width
+  tick_len_pt: 3.5
+  tick_width_pt: 0.5
+  line_pt: 1.2
+  marker_pt: 4.5

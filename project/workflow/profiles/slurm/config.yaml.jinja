@@ -1,0 +1,26 @@
+# SLURM (HPC) execution profile — Snakemake 8 slurm executor plugin.
+# Same DAG as local; only the executor changes. Never run plain Python on a
+# login node — submit through this profile:  snakemake --profile workflow/profiles/slurm
+executor: slurm
+jobs: 50
+printshellcmds: true
+rerun-incomplete: true
+keep-going: false
+{% if use_apptainer -%}
+# Run EACH job inside the container on its compute node (not just the submitting
+# process). Requires the global `container:` directive in the Snakefile and a
+# built container.sif (apptainer build container.sif containers/apptainer.def).
+software-deployment-method:
+  - apptainer
+{% endif -%}
+default-resources:
+  # REQUIRED EDIT before first cluster run: set this to your cluster's partition
+  # (run `sinfo` to list partitions). Submission fails fast with the placeholder.
+  slurm_partition: "REPLACE-PARTITION"
+  mem_mb: 4000
+  runtime: 60          # minutes
+# Per-rule overrides go here, e.g.:
+# set-resources:
+#   heavy_rule:
+#     mem_mb: 32000
+#     runtime: 240

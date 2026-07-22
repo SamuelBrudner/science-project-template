@@ -1,0 +1,20 @@
+# `data/` — Data layer
+
+All data lives here and is versioned with **{{ data_versioning }}**, not git.
+Three stages, by how they are produced:
+
+| Subfolder | Produced by | Editable? |
+|-----------|-------------|:---------:|
+| `raw/` | The instrument / the world | ⛔ immutable |
+| `interim/` | Pipeline, mid-stream | ⛔ regenerated |
+| `processed/` | Pipeline, analysis-ready (parquet/zarr) | ⛔ regenerated |
+
+**Only `raw/` is irreplaceable.** `interim/` and `processed/` are cheap: they are
+rebuilt by `snakemake` from `raw/` + code, so deleting them costs only compute. If
+you ever feel the urge to hand-edit a file in `interim/` or `processed/`, the fix
+belongs in the pipeline instead.
+
+- Populate with `{{ data_versioning }} pull`; publish with `{{ data_versioning }} push`.
+- Nothing in `data/` is committed to git except this README and `.gitignore`.
+
+Immutability rules for `raw/` are in [`raw/README.md`](raw/README.md).

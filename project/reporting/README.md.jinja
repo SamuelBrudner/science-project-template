@@ -1,0 +1,37 @@
+# `reporting/` — Papers, slides, reports
+
+Where results become communication. Unlike `results/` (machine-made, regenerable),
+everything here is **human-authored, point-in-time, and versioned along its own
+lifecycle**.
+
+```
+reporting/
+├── _assets/         # shared: lab.cls, refs.bib, theme-colors.tex (GENERATED)
+├── papers/          # manuscripts + frozen submission snapshots
+├── posters/         # conference posters (large-format)
+├── presentations/   # dated slide decks
+└── writeups/        # periodic internal reports & updates
+```
+
+Each is a separate subfolder because the artifact types have different lifecycles
+and audiences — a manuscript accretes over months, a poster or deck is a dated
+one-off tied to a venue, a report is periodic. They *share* figures and style, but
+they are not the same thing.
+
+## Rules that apply to everything here
+1. **Reference figures, don't copy them.** Point at `../results/figures/light/…`
+   (papers) or `…/dark/…` (dark decks). The exception is frozen snapshots (below),
+   where copying *is* the point.
+2. **Record provenance.** Each artifact notes the git SHA / {{ data_versioning }}
+   rev of the results it was built from, so "which version did I show?" is
+   answerable later.
+3. **Shared style, once.** Article PDFs (paper/poster/writeup) build from
+   `_assets/lab.cls` + `_assets/refs.bib`; the Beamer deck brings its own class but
+   shares `_assets/fonts.tex` + the theme colours. `_assets/theme-colors.tex` is
+   **generated** from `conf/theme/` — do not edit it by hand.
+4. **A human commits the words.** Agents may draft prose and wire figure
+   references; people own the text. (See `AGENTS.md`.)
+
+Per-type conventions: [`papers/`](papers/README.md),
+[`posters/`](posters/README.md), [`presentations/`](presentations/README.md),
+[`writeups/`](writeups/README.md).

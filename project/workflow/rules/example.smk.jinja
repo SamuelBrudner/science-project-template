@@ -1,0 +1,111 @@
+# Example stage — delete once real analysis lands. Doubles as the CI smoke test.
+# Demonstrates a real manifest-driven pipeline:
+#   validate manifest -> per-sample QC -> aggregate QC-passed -> figure -> provenance
+# Sample wildcards and raw paths come from the validated metadata manifest.
+
+import re
+
+import pandas as pd
+
+# Manifest path comes from the (thin) workflow config, not a hardcoded literal.
+_MANIFEST_PATH = config["sample_manifest"]
+# All-string read with NA-parsing off so schema string ids survive ("001" stays
+# "001", not int 1; "NA" stays "NA").
+_MANIFEST = pd.read_csv(_MANIFEST_PATH, dtype=str, keep_default_na=False)
+# Fail loud on duplicate sample IDs — otherwise dict() would silently drop rows
+# and the DAG would disagree with aggregation.
+_dups = _MANIFEST["sample_id"][_MANIFEST["sample_id"].duplicated()].tolist()
+if _dups:
+    raise ValueError(f"duplicate sample_id(s) in {_MANIFEST_PATH}: {sorted(set(_dups))}")
+# sample_id becomes a path component (results/qc/<id>.json); reject anything that
+# could escape the output directory BEFORE the DAG builds output paths from it.
+# fullmatch (not match): a trailing "\n" slips past "$", so "abc\n" must be caught.
+_SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+_unsafe = [s for s in _MANIFEST["sample_id"] if not _SAFE_ID.fullmatch(s) or ".." in s]
+if _unsafe:
+    raise ValueError(
+        f"unsafe sample_id(s) in {_MANIFEST_PATH} (path traversal risk): {_unsafe}"
+    )
+SAMPLES = _MANIFEST["sample_id"].tolist()
+RAW = dict(zip(_MANIFEST["sample_id"], _MANIFEST["file"]))
+COND = dict(zip(_MANIFEST["sample_id"], _MANIFEST["condition"]))
+
+
+# Constrain {sample} to the known IDs so non-sample artifacts (e.g.
+# excluded_samples.json) never match the per-sample wildcard.
+wildcard_constraints:
+    sample="|".join(re.escape(s) for s in SAMPLES) if SAMPLES else "$^",
+
+
+rule validate_metadata:
+    input:
+        manifest=_MANIFEST_PATH,
+    params:
+        # DAG root: a runtime OR code change re-validates too (see config.smk).
+        realized_fp=_REALIZED_FP,
+        code_fp=_CODE_FP,
+    output:
+        ok="results/qc/manifest_ok.txt",
+    script:
+        "../scripts/validate_metadata.py"
+
+
+rule qc_sample:
+    input:
+        raw=lambda wc: RAW[wc.sample],
+        manifest_ok="results/qc/manifest_ok.txt",
+        config="results/resolved_config.yaml",
+    params:
+        sample=lambda wc: wc.sample,
+        condition=lambda wc: COND[wc.sample],
+    output:
+        qc="results/qc/{sample}.json",
+    script:
+        "../scripts/qc_sample.py"
+
+
+rule aggregate:
+    input:
+        qc=expand("results/qc/{s}.json", s=SAMPLES),
+        config="results/resolved_config.yaml",
+    output:
+        table="results/tables/measurements.parquet",
+        qc_summary="results/qc/qc_summary.csv",
+        excluded="results/excluded_samples.json",
+    script:
+        "../scripts/aggregate.py"
+
+
+rule example_figure:
+    input:
+        table="results/tables/measurements.parquet",
+        config="results/resolved_config.yaml",
+        mpl_light="src/{{ package_name }}/_generated/light.mplstyle",
+        mpl_dark="src/{{ package_name }}/_generated/dark.mplstyle",
+    output:
+        light_pdf="results/figures/light/example_group_means.pdf",
+        light_png="results/figures/light/example_group_means.png",
+        dark_pdf="results/figures/dark/example_group_means.pdf",
+        dark_png="results/figures/dark/example_group_means.png",
+    script:
+        "../scripts/example_figure.py"
+
+
+# Cohort QC distribution — reads the FULL qc_summary (all samples, incl. QC-failed)
+# so the figure shows the whole cohort: passers vs excluded, per-sample means by
+# condition. A raw QC exemplar distinct from the results figure.
+rule qc_distribution:
+    input:
+        qc_summary="results/qc/qc_summary.csv",
+        manifest=_MANIFEST_PATH,
+        raw=[RAW[s] for s in SAMPLES],
+        config="results/resolved_config.yaml",
+        mpl_light="src/{{ package_name }}/_generated/light.mplstyle",
+        mpl_dark="src/{{ package_name }}/_generated/dark.mplstyle",
+    output:
+        light_pdf="results/figures/light/qc_distribution.pdf",
+        light_png="results/figures/light/qc_distribution.png",
+        dark_pdf="results/figures/dark/qc_distribution.pdf",
+        dark_png="results/figures/dark/qc_distribution.png",
+    script:
+        "../scripts/qc_figure.py"

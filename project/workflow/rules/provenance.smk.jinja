@@ -1,0 +1,79 @@
+# Provenance manifest — ALWAYS built (not tied to the example), so every project
+# has a run identity + registry producer. Hashes the resolved config, the code
+# trees, the environment lock, and (when the example is present) its data +
+# derived artifacts. Consumed by scripts/register_run.py.
+#
+# The code files are DECLARED inputs (not globbed inside the script), so editing
+# any of them invalidates results/provenance.json and Snakemake re-runs it — the
+# manifest can never silently retain a stale hash / run_id.
+from pathlib import Path as _Path
+
+# The code-file enumeration (_provenance_code_files) is defined in config.smk
+# (included first) so the provenance code INPUTS and the code_fp rebuild trigger
+# use exactly the same file set. Editing any of these files re-runs provenance
+# (they are declared inputs) AND rebuilds the pipeline (config.smk's code_fp).
+# The environment files (conda spec/lock, container recipe, profiles) are NOT code,
+# and the DECLARED spec is NOT part of any run identity: it is recorded descriptively
+# (freshness/intention only). The execution_id keys on the REALIZED runtime that
+# actually ran — interpreter + installed packages — plus the container's CONTENT
+# digest, computed in scripts/provenance.py, not from these declared files.
+
+
+def _provenance_env_files():
+    """Environment definitions — DECLARED inputs (editing one re-runs provenance and
+    refreshes the descriptive 'environment' record) but EXCLUDED from run identity.
+
+    Covers the conda spec + lock, the container recipe + built image (if present),
+    and the scheduler profiles. Their hashes live in the manifest's 'environment'
+    section, never in the run_id — an env change that leaves outputs unchanged
+    must not relabel the artifacts.
+    """
+    out = ["environment.yml"]
+    for f in ("conda-lock.yml", "containers/apptainer.def", "container.sif"):
+        if _Path(f).exists():
+            out.append(f)
+    out += sorted(
+        str(p) for p in _Path("workflow/profiles").rglob("*") if p.is_file()
+    )
+    return out
+
+
+_PROVENANCE_CODE = _provenance_code_files()
+_PROVENANCE_ENV = _provenance_env_files()
+# _REALIZED_FP is defined in config.smk (included first) and shared here so the
+# provenance rule refreshes on a runtime change even when built on its own.
+
+
+rule provenance:
+    input:
+        config="results/resolved_config.yaml",
+        code=_PROVENANCE_CODE,
+        env=_PROVENANCE_ENV,
+{%- if include_example %}
+        # sources
+        manifest=_MANIFEST_PATH,
+        raw=[RAW[s] for s in SAMPLES],
+        qc=expand("results/qc/{s}.json", s=SAMPLES),
+        # derived
+        table="results/tables/measurements.parquet",
+        qc_summary="results/qc/qc_summary.csv",
+        excluded="results/excluded_samples.json",
+        figures=[
+            "results/figures/light/example_group_means.pdf",
+            "results/figures/light/example_group_means.png",
+            "results/figures/dark/example_group_means.pdf",
+            "results/figures/dark/example_group_means.png",
+            "results/figures/light/qc_distribution.pdf",
+            "results/figures/light/qc_distribution.png",
+            "results/figures/dark/qc_distribution.pdf",
+            "results/figures/dark/qc_distribution.png",
+        ],
+{%- endif %}
+    params:
+        # Rerun trigger: refresh provenance when the realized runtime changes
+        # (Snakemake's `params` rerun-trigger), even if no tracked file changed.
+        realized_fp=_REALIZED_FP,
+    output:
+        prov="results/provenance.json",
+    script:
+        "../scripts/provenance.py"

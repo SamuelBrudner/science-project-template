@@ -1,0 +1,92 @@
+"""Tests for the theme SSOT: strict validation, rendering, and — critically —
+that the generated Matplotlib style *actually applies* (guards the silent
+'#'-comment fallback where hex colours are dropped)."""
+
+from pathlib import Path
+
+import matplotlib as mpl
+import pytest
+
+from {{ package_name }} import theming
+
+mpl.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+
+BASE = {
+    "roles": ["background", "foreground", "accent"],
+    "fonts": {
+        "family": "DejaVu Sans",
+        "base_pt": 8,
+        "tick_pt": 7,
+        "legend_pt": 7,
+    },
+    "figure": {
+        "width_in": 3.5,
+        "height_in": 2.5,
+        "dpi": 300,
+        "spine_pt": 0.6,
+        "tick_len_pt": 3.5,
+        "tick_width_pt": 0.5,
+        "line_pt": 1.2,
+        "marker_pt": 4.5,
+    },
+}
+LIGHT = {"background": "#FFFFFF", "foreground": "#1A1A1A", "accent": "#0072B2"}
+DARK = {"background": "#00000000", "foreground": "#EAEAEA", "accent": "#56B4E9"}
+
+
+def test_load_theme_ok() -> None:
+    theme = theming.load_theme(BASE, LIGHT, DARK)
+    assert theme.roles == ["background", "foreground", "accent"]
+
+
+def test_missing_role_fails_loud() -> None:
+    with pytest.raises(ValueError, match="missing roles"):
+        theming.load_theme(BASE, {"background": "#FFFFFF"}, DARK)
+
+
+def test_non_hex_fails_loud() -> None:
+    with pytest.raises(ValueError, match="non-hex"):
+        theming.load_theme(BASE, {**LIGHT, "accent": "blue"}, DARK)
+
+
+def test_render_latex_defines_every_role() -> None:
+    theme = theming.load_theme(BASE, LIGHT, DARK)
+    tex = theming.render_latex_colors(theme, "light")
+    assert tex.count("\\definecolor") == 3
+
+
+def test_mplstyle_has_bare_hex_not_commented() -> None:
+    theme = theming.load_theme(BASE, LIGHT, DARK)
+    style = theming.render_mplstyle(theme, "light")
+    assert "figure.facecolor: FFFFFF" in style  # no leading '#'
+    assert "#FFFFFF" not in style
+
+
+def test_mplstyle_actually_applies(tmp_path: Path) -> None:
+    """The generated style must set real rcParams, not fall back to defaults."""
+    theme = theming.load_theme(BASE, LIGHT, DARK)
+    path = tmp_path / "light.mplstyle"
+    path.write_text(theming.render_mplstyle(theme, "light"))
+    with mpl.rc_context():
+        plt.style.use(str(path))
+        assert mpl.colors.to_hex(mpl.rcParams["figure.facecolor"]).lower() == "#ffffff"
+        assert mpl.colors.to_hex(mpl.rcParams["text.color"]).lower() == "#1a1a1a"
+        cycle = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+        assert mpl.colors.to_hex(cycle[0]).lower() == "#0072b2"  # accent role
+        assert mpl.rcParams["pdf.fonttype"] == 42  # editable/selectable text
+        # Nature-inspired spec actually applied
+        assert tuple(mpl.rcParams["figure.figsize"]) == (3.5, 2.5)
+        assert mpl.rcParams["xtick.labelsize"] == 7
+        assert mpl.rcParams["axes.spines.top"] is False
+        assert mpl.rcParams["axes.spines.right"] is False
+        assert mpl.rcParams["legend.frameon"] is False
+
+
+def test_light_and_dark_differ() -> None:
+    theme = theming.load_theme(BASE, LIGHT, DARK)
+    light = theming.render_mplstyle(theme, "light")
+    dark = theming.render_mplstyle(theme, "dark")
+    assert light != dark
+    assert "savefig.transparent: True" in dark
+    assert "savefig.transparent: False" in light

@@ -1,0 +1,36 @@
+"""Example marimo notebook (exploration only). Run:  marimo edit exploratory/example_marimo.py
+
+marimo notebooks are pure Python: git-diffable, no stored outputs, reactive
+(cells re-run when their inputs change), and runnable as a script. Nothing here
+is load-bearing — promote anything real into src/ + a Snakemake rule.
+"""
+
+import marimo
+
+app = marimo.App()
+
+
+@app.cell
+def _():
+    import marimo as mo
+
+    return (mo,)
+
+
+@app.cell
+def _(mo):
+    # project_name is injected as a JSON string literal, so quotes/backslashes in
+    # the name can't break (or escape) this Python string.
+    mo.md("# Exploration — " + {{ project_name | tojson }})
+    return
+
+
+@app.cell
+def _():
+    # Explore with the project's library, e.g.:
+    # from {{ package_name }} import theming
+    return
+
+
+if __name__ == "__main__":
+    app.run()

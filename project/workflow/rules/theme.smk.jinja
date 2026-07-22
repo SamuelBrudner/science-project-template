@@ -1,0 +1,22 @@
+# Theme generation: conf/theme/*.yaml -> mplstyles + LaTeX \definecolor files.
+# Single source of truth (docs/structure.md sections 6 & 8). Figure rules depend
+# on the mplstyles; the reporting layer \input the .tex files.
+
+rule generate_theme:
+    input:
+        base="conf/theme/base.yaml",
+        light="conf/theme/light.yaml",
+        dark="conf/theme/dark.yaml",
+    params:
+        # DAG root: a runtime OR code change re-renders the theme too (matplotlib
+        # version / theming.py changes can affect the .mplstyle). See config.smk.
+        realized_fp=_REALIZED_FP,
+        code_fp=_CODE_FP,
+    output:
+        mpl_light="src/{{ package_name }}/_generated/light.mplstyle",
+        mpl_dark="src/{{ package_name }}/_generated/dark.mplstyle",
+        tex_light="reporting/_assets/theme-colors-light.tex",
+        tex_dark="reporting/_assets/theme-colors-dark.tex",
+        tex="reporting/_assets/theme-colors.tex",
+    script:
+        "../scripts/generate_theme.py"

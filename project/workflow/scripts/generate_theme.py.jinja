@@ -1,0 +1,36 @@
+"""Snakemake entrypoint: render theme artifacts from conf/theme/*.yaml.
+
+Thin: reads YAML, calls the pure {{ package_name }}.theming functions, writes
+files. No business logic here (docs/structure.md — pipeline layer rules).
+"""
+
+# NOTE: Snakemake prepends a preamble to script: files, so no `from __future__`
+# import here (it must be the first line of a module and would break).
+from pathlib import Path
+
+import yaml
+
+from {{ package_name }} import theming
+
+snakemake = snakemake  # noqa: F821  (injected by Snakemake)
+
+
+def _read(path: str) -> dict:
+    return yaml.safe_load(Path(path).read_text())
+
+
+theme = theming.load_theme(
+    base=_read(snakemake.input.base),
+    light=_read(snakemake.input.light),
+    dark=_read(snakemake.input.dark),
+)
+
+Path(snakemake.output.mpl_light).parent.mkdir(parents=True, exist_ok=True)
+Path(snakemake.output.mpl_light).write_text(theming.render_mplstyle(theme, "light"))
+Path(snakemake.output.mpl_dark).write_text(theming.render_mplstyle(theme, "dark"))
+
+Path(snakemake.output.tex_light).parent.mkdir(parents=True, exist_ok=True)
+Path(snakemake.output.tex_light).write_text(theming.render_latex_colors(theme, "light"))
+Path(snakemake.output.tex_dark).write_text(theming.render_latex_colors(theme, "dark"))
+# Default \input target (papers use light/print colours).
+Path(snakemake.output.tex).write_text(theming.render_latex_colors(theme, "light"))

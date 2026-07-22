@@ -1,0 +1,28 @@
+# Contributing to {{ project_name }}
+
+## Setup
+```bash
+# A fresh clone has environment.yml but no lock yet:
+conda env create -f environment.yml -p ./conda_env
+# Once a conda-lock.yml has been generated & committed, prefer the exact lock:
+#   conda-lock install --prefix ./conda_env conda-lock.yml
+conda activate ./conda_env
+pip install -e ".[dev]"
+pre-commit install && pre-commit install --hook-type commit-msg
+```
+
+## Workflow
+- **Branch, don't push to `main`.** `git checkout -b <type>/<short-desc>`.
+- **Conventional Commits** (enforced by commitizen): `feat:`, `fix:`, `docs:`,
+  `refactor:`, `test:`, `chore:`. Releases + changelog are automated via `cz bump`.
+- **TDD** for library code in `src/`: write the failing test first.
+- Open a PR; CI must be green (pre-commit, tests, pipeline reproduce) to merge.
+
+## The checklist (PR template covers this)
+- [ ] `pre-commit run --all-files` passes
+- [ ] Tests added/updated; `pytest` green
+- [ ] New public functions have type hints + numpydoc docstrings
+- [ ] No secrets committed; no edits to `data/raw/` or `results/`
+- [ ] Docs updated if behavior changed
+
+See `docs/structure.md` for the repo layout and the rules behind it.

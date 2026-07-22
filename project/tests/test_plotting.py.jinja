@@ -1,0 +1,24 @@
+"""Tests for the publication-figure helpers."""
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+
+from {{ package_name }}.plotting import legend_outside, panel_label  # noqa: E402
+
+
+def test_panel_label_adds_bold_text() -> None:
+    fig, ax = plt.subplots()
+    panel_label(ax, "a")
+    texts = [t for t in ax.texts if t.get_text() == "a"]
+    assert texts and texts[0].get_fontweight() == "bold"
+    plt.close(fig)
+
+
+def test_legend_outside_anchors_right() -> None:
+    fig, ax = plt.subplots()
+    ax.plot([0, 1], [0, 1], label="x")
+    legend_outside(ax)
+    assert ax.get_legend() is not None
+    plt.close(fig)

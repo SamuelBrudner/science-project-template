@@ -1,0 +1,69 @@
+# Reproducing {{ project_name }}
+
+Step-by-step, environment-up reproduction.
+
+## 1. Environment
+```bash
+conda env create -f environment.yml -p ./conda_env
+conda activate ./conda_env
+pip install -e ".[dev]"
+```
+For a byte-reproducible environment, commit a lock and install from it:
+`conda-lock lock --file environment.yml -p linux-64 -p osx-arm64` then
+`conda-lock install --prefix ./conda_env conda-lock.yml`.
+{% if use_apptainer %}
+On HPC, build the container once, then run *inside* it (below):
+```bash
+apptainer build container.sif containers/apptainer.def   # needs conda-lock.yml
+```
+{% endif %}
+
+## 2. Secrets
+```bash
+cp .env.example .env      # fill in required values (see src/{{ package_name }}/settings.py)
+```
+
+## 3. Data (first time)
+```bash
+bash scripts/setup_data.sh    # initialize DVC (idempotent)
+# {{ data_versioning }} pull  # only once a remote is configured and data pushed
+```
+
+## 4. Run the pipeline
+```bash
+snakemake --cores 1                                # workstation
+{% if compute_backend == "slurm" %}snakemake --profile workflow/profiles/slurm        # cluster
+{% endif %}```
+{% if compute_backend == "slurm" and use_apptainer %}
+On the cluster, the SLURM profile sets `software-deployment-method: apptainer` and
+the Snakefile declares `container: "container.sif"`, so Snakemake runs **each job**
+inside the built image on its compute node. Build the image first:
+`apptainer build container.sif containers/apptainer.def`.
+{% endif %}
+{% if include_example -%}
+This validates `metadata/` schemas, generates the theme, runs the example analysis
+with deterministic seeds, and writes `results/figures/{light,dark}/` +
+`results/tables/`, then `results/provenance.json`.
+{%- else -%}
+This resolves + validates the Hydra config, generates the theme assets, and writes
+`results/provenance.json`. It does **not** yet produce QC, tables, or figures —
+this is a skeleton; add those stages (see `workflow/README.md`). Once your DAG
+reproduces your figures from `data/raw/`, that's the bar to hold.
+{%- endif %}
+
+## 5. Build reporting artifacts
+```bash
+# figures are referenced from results/. Article PDFs (paper/poster/writeup) use the
+# shared lab.cls; the Beamer deck uses its own class (shared fonts.tex + colours).
+make -C reporting all
+```
+
+## 6. Verify
+```bash
+pytest
+pre-commit run --all-files
+```
+{% if include_example %}Every figure/table is a named target: `snakemake --list` shows them all.
+{%- else %}`snakemake --list` shows the current targets (resolved config, theme, provenance);
+your added figure/table rules will appear here too.
+{%- endif %}

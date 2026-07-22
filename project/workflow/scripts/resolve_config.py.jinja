@@ -1,0 +1,30 @@
+"""Compose the Hydra config, validate it, and write the resolved artifact.
+
+This is what wires conf/ into the DAG: the output is a declared pipeline input,
+so any parameter change invalidates downstream outputs. Validation is fail-loud.
+No `from __future__` import (Snakemake prepends a preamble to script: files).
+"""
+
+import os
+import sys
+from pathlib import Path
+
+import yaml
+from hydra import compose, initialize_config_dir
+from omegaconf import OmegaConf
+
+sys.path.insert(0, os.getcwd())  # repo root, so top-level `metadata` is importable
+from metadata.schemas import AppConfig  # noqa: E402
+
+snakemake = snakemake  # noqa: F821
+
+conf_dir = str(Path(snakemake.input.config).resolve().parent)
+with initialize_config_dir(version_base=None, config_dir=conf_dir):
+    cfg = compose(config_name="config")
+
+resolved = OmegaConf.to_container(cfg, resolve=True)
+validated = AppConfig(**resolved)  # fail loud on bad/missing params
+
+Path(snakemake.output.resolved).write_text(
+    yaml.safe_dump(validated.model_dump(), sort_keys=True)
+)

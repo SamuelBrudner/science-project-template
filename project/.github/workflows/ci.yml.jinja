@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: the workflow only needs to read the repo.
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}   # errexit + pipefail so failed steps stop
+    steps:
+      # Actions are pinned to full commit SHAs (immutable references). The version
+      # comments keep Dependabot and human review legible. persist-credentials:false
+      # keeps the checkout token off disk while later steps run PR-controlled code.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0   # full history for the Conventional-Commits range check
+          persist-credentials: false
+
+      # Environment from environment.yml (a fresh render has no lock yet).
+      # For a byte-reproducible release, commit a conda-lock.yml and build the
+      # container from it (docs/structure.md §8); CI here tests current deps.
+      - uses: mamba-org/setup-micromamba@ab6bf8bf7403e8023a094abeec19d6753bdc143e # v2.0.1
+        with:
+          environment-file: environment.yml
+          environment-name: ci
+          cache-environment: true
+
+      - name: Install package + dev tools
+        run: pip install -e ".[dev]"
+
+      - name: Pre-commit (ruff · black · isort · mypy · interrogate · gitleaks)
+        run: pre-commit run --all-files
+
+      - name: Commit-message lint (Conventional Commits)
+        if: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
+        run: cz check --rev-range {% raw %}origin/${{ github.base_ref }}..HEAD{% endraw %}
+
+      - name: Validate metadata + funding schemas
+        run: |
+          python -c "import pandas as pd, yaml; from metadata.schemas import SampleRecord, Funding; [SampleRecord(**r) for r in pd.read_csv('metadata/samples.example.csv').to_dict('records')]; Funding(**yaml.safe_load(open('funding.yaml')))"
+
+      - name: Tests
+        run: pytest
+
+      # Figures are gitignored build targets: prove they regenerate from current
+      # code (docs/structure.md). Regeneration lives here, never a pre-commit hook.
+      - name: Reproduce pipeline
+        run: snakemake --cores 2
+{%- if include_example %}
+
+      - name: Assert expected artifacts were produced
+        run: |
+          set -euo pipefail
+          for f in \
+            results/figures/light/example_group_means.pdf \
+            results/figures/dark/example_group_means.png \
+            results/figures/light/qc_distribution.pdf \
+            results/provenance.json \
+            results/qc/qc_summary.csv \
+            results/excluded_samples.json; do
+            test -f "$f" || { echo "::error::missing artifact $f"; exit 1; }
+          done
+          # The example cohort intentionally includes QC-failing samples, so the
+          # exclusion path is exercised (non-empty excluded list).
+          python -c "import json; ex=json.load(open('results/excluded_samples.json')); assert ex, 'expected excluded samples'; print('excluded:', ex)"
+{%- endif %}

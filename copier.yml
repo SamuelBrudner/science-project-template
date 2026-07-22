@@ -1,0 +1,303 @@
+# Copier template — science project (lab work + data + analysis + reporting)
+# Usage:  copier copy gh:SamuelBrudner/science-project-template  path/to/new-project
+# Update: copier update            (run inside a generated project)
+#
+# Design rationale for every choice below lives in the generated docs/structure.md.
+
+# ---------------------------------------------------------------------------
+# Copier settings
+# ---------------------------------------------------------------------------
+_subdirectory: project          # only files under project/ are rendered
+_min_copier_version: "9.0.0"
+_jinja_extensions:              # for {% now %} in LICENSE / CITATION (pip install jinja2-time)
+  - jinja2_time.TimeExtension
+
+# Never overwrite/merge user-accumulated data on `copier update`. The run ledger
+# grows with each registered execution, so it must be preserved as-is (a later
+# schema is migrated in place by scripts/register_run.py, not by Copier).
+_skip_if_exists:
+  - "metadata/runs.csv"
+
+# Keep Copier defaults, plus drop example files when include_example is false.
+_exclude:
+  - "copier.yml"
+  - "~*"
+  - "*.py[co]"
+  - "__pycache__"
+  - ".git"
+  - ".DS_Store"
+  # NOTE: _exclude matches the RENDERED path, so no .jinja suffix here.
+  - "{% if not include_example %}src/*/example.py{% endif %}"
+  - "{% if not include_example %}src/*/qc.py{% endif %}"
+  - "{% if not include_example %}**/test_qc.py{% endif %}"
+  - "{% if not include_example %}**/example_figure.py{% endif %}"
+  - "{% if not include_example %}**/qc_figure.py{% endif %}"
+  - "{% if not include_example %}src/*/qc_plots.py{% endif %}"
+  - "{% if not include_example %}**/test_qc_plots.py{% endif %}"
+  - "{% if not include_example %}**/test_metadata_ids.py{% endif %}"
+  - "{% if not include_example %}**/example.smk{% endif %}"
+  - "{% if not include_example %}**/test_example.py{% endif %}"
+  - "{% if not include_example %}tests/fixtures/raw/*{% endif %}"
+  - "{% if not include_example %}**/validate_metadata.py{% endif %}"
+  - "{% if not include_example %}**/qc_sample.py{% endif %}"
+  - "{% if not include_example %}**/aggregate.py{% endif %}"
+  # provenance.py + provenance.smk are ALWAYS shipped (run identity is not part of
+  # the deletable example); they degrade to hashing config+code+env when example off.
+  - "{% if not include_example %}reporting/papers/example/*{% endif %}"
+  - "{% if not include_example %}reporting/presentations/example/*{% endif %}"
+  - "{% if not include_example %}reporting/Makefile{% endif %}"
+  - "{% if not use_apptainer %}containers/apptainer.def{% endif %}"
+  - "{% if compute_backend != 'slurm' %}workflow/profiles/slurm/config.yaml{% endif %}"
+  - "{% if docs_backend != 'sphinx' %}docs/conf.py{% endif %}"
+  - "{% if docs_backend != 'sphinx' %}docs/index.rst{% endif %}"
+  - "{% if docs_backend != 'sphinx' %}docs/tutorial.md{% endif %}"
+  - "{% if docs_backend != 'mkdocs' %}mkdocs.yml{% endif %}"
+  - "{% if docs_backend != 'mkdocs' %}docs/index.md{% endif %}"
+  - "{% if docs_backend != 'mkdocs' %}docs/tutorial.ipynb{% endif %}"
+  - "{% if notebook_tool != 'marimo' %}exploratory/example_marimo.py{% endif %}"
+  - "{% if notebook_tool != 'jupyter' %}exploratory/example.ipynb{% endif %}"
+# Default _templates_suffix is ".jinja": ONLY *.jinja files are rendered; every
+# other file (incl. raw LaTeX with braces) is copied verbatim. So default Jinja
+# {{ }} delimiters are safe here.
+
+_message_after_copy: |
+  Project "{{ project_name }}" created in {{ _copier_conf.dst_path }}
+
+  Next steps (run inside the new project directory):
+    git init && git add -A && git commit -m "chore: initial project from template"
+    conda env create -f environment.yml -p ./conda_env   # CI uses environment.yml
+    conda activate ./conda_env
+    pip install -e ".[dev]"
+    pre-commit install && pre-commit install --hook-type commit-msg
+
+  Reproduce the example:  snakemake --cores 1
+
+  For a byte-reproducible release/container, additionally commit a lock:
+    conda-lock lock --file environment.yml -p linux-64 -p osx-arm64   # -> conda-lock.yml
+  Read docs/structure.md for the why behind this layout.
+
+# ---------------------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------------------
+project_name:
+  type: str
+  help: "Human-readable project name (e.g. 'Mechanism of X in Y')"
+  validator: >-
+    {% if not (project_name.strip() and project_name.isprintable()) %}
+    project_name cannot be empty or contain control characters/newlines
+    {% endif %}
+
+project_slug:
+  type: str
+  help: "Directory / repo name (kebab-case: lowercase letters, digits, hyphens)"
+  default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  validator: >-
+    {% if not (project_slug and project_slug == project_slug.lower()
+               and project_slug.isascii()
+               and project_slug[0] not in '-0123456789'
+               and project_slug.replace('-', 'a').isalnum()) %}
+    project_slug must be ASCII kebab-case (lowercase letters/digits/hyphens, not starting with a digit or hyphen): got "{{ project_slug }}"
+    {% endif %}
+
+package_name:
+  type: str
+  help: "Importable Python package name (snake_case, a valid Python identifier)"
+  default: "{{ project_slug | lower | replace('-', '_') }}"
+  validator: >-
+    {%- set kw = ['False','None','True','and','as','assert','async','await',
+      'break','class','continue','def','del','elif','else','except','finally',
+      'for','from','global','if','import','in','is','lambda','nonlocal','not',
+      'or','pass','raise','return','try','while','with','yield'] -%}
+    {% if not (package_name.isidentifier() and package_name.isascii()
+               and package_name == package_name.lower()
+               and package_name not in kw and not package_name.startswith('_')) %}
+    package_name must be a lowercase ASCII Python identifier, not a keyword, and not start with '_': got "{{ package_name }}"
+    {% endif %}
+
+project_description:
+  type: str
+  help: "One-line description (used in package + citation metadata)"
+  default: ""
+
+author_given:
+  type: str
+  help: "Lead author given (first) name"
+  # Must be non-empty and printable (no newlines/tabs) — it is embedded in Python
+  # (docs/conf.py), TeX, and CITATION metadata, where a newline would break output.
+  validator: >-
+    {% if not author_given.strip() %}given name cannot be empty{% elif not author_given.isprintable() %}given name must be printable (no newlines/tabs/control chars){% endif %}
+
+author_family:
+  type: str
+  help: "Lead author family (last) name"
+  validator: >-
+    {% if not author_family.strip() %}family name cannot be empty{% elif not author_family.isprintable() %}family name must be printable (no newlines/tabs/control chars){% endif %}
+
+author:
+  type: str
+  when: false
+  default: "{{ author_given }} {{ author_family }}"
+
+# LaTeX-escaped variants (computed, not prompted) for use inside .tex files, so
+# names like "R&D #1_Study" don't break the build. All TeX specials are ESCAPED
+# (not deleted); backslash is routed through a sentinel so it isn't double-escaped.
+# The sentinel is the control char \x01, which the isprintable validators on
+# author/project_name guarantee cannot appear in the input (so no collision — a
+# literal name like "ZZBSZZ" renders verbatim).
+author_tex:
+  type: str
+  when: false
+  default: |-
+    {{ author | replace('\\', '\x01') | replace('&', '\&') | replace('%', '\%') | replace('$', '\$') | replace('#', '\#') | replace('_', '\_') | replace('{', '\{') | replace('}', '\}') | replace('~', '\textasciitilde{}') | replace('^', '\textasciicircum{}') | replace('\x01', '\textbackslash{}') }}
+
+project_name_tex:
+  type: str
+  when: false
+  default: |-
+    {{ project_name | replace('\\', '\x01') | replace('&', '\&') | replace('%', '\%') | replace('$', '\$') | replace('#', '\#') | replace('_', '\_') | replace('{', '\{') | replace('}', '\}') | replace('~', '\textasciitilde{}') | replace('^', '\textasciicircum{}') | replace('\x01', '\textbackslash{}') }}
+
+# Black-STABLE Python string LITERALS (computed) for embedding user text in .py
+# files. Mirrors Black's quote choice: prefer double quotes, but switch to single
+# when the text has more double quotes than single (fewer escapes) — so the
+# generated file matches what Black would produce and the first pre-commit is a
+# no-op. Backslash escaped first so added quote-escapes aren't doubled. Emits its
+# own surrounding quotes: use as `{{ '{{' }} project_name_py {{ '}}' }}` (no extra quoting).
+project_name_py:
+  type: str
+  when: false
+  default: |-
+    {% if project_name.count('"') > project_name.count("'") %}'{{ project_name | replace('\\', '\\\\') | replace("'", "\\'") }}'{% else %}"{{ project_name | replace('\\', '\\\\') | replace('"', '\\"') }}"{% endif %}
+
+author_py:
+  type: str
+  when: false
+  default: |-
+    {% if author.count('"') > author.count("'") %}'{{ author | replace('\\', '\\\\') | replace("'", "\\'") }}'{% else %}"{{ author | replace('\\', '\\\\') | replace('"', '\\"') }}"{% endif %}
+
+author_email:
+  type: str
+  help: "Contact email"
+  validator: >-
+    {% if not (author_email.count('@') == 1
+               and author_email.split() == [author_email]
+               and author_email == author_email.strip()
+               and author_email.isascii()
+               and author_email.split('@')[0]
+               and '.' in author_email.split('@')[1]
+               and not author_email.split('@')[1].startswith('.')
+               and not author_email.endswith('.')) %}
+    author_email must be a valid whitespace-free email address: got "{{ author_email }}"
+    {% endif %}
+
+orcid:
+  type: str
+  help: "ORCID iD as a full URL (https://orcid.org/0000-0002-1825-0097), or blank"
+  default: ""
+  validator: >-
+    {%- set oid = orcid.replace('https://orcid.org/', '') -%}
+    {%- set digits = oid.replace('-', '') -%}
+    {%- set ns = namespace(total=0, check='?') -%}
+    {%- if digits | length == 16 and digits[:15].isdigit() -%}
+      {%- for c in digits[:15] -%}{%- set ns.total = (ns.total + (c | int)) * 2 -%}{%- endfor -%}
+      {%- set res = (12 - (ns.total % 11)) % 11 -%}
+      {%- set ns.check = 'X' if res == 10 else (res | string) -%}
+    {%- endif -%}
+    {% if orcid and not (orcid.startswith('https://orcid.org/')
+           and oid | length == 19
+           and oid.isascii()
+           and (oid.split('-') | length == 4)
+           and (oid.split('-') | map('length') | select('equalto', 4) | list | length == 4)
+           and digits | length == 16
+           and digits[:15].isdigit()
+           and digits[15] == ns.check) %}
+    orcid must be a full valid URL: four 4-char groups, ASCII, correct MOD-11-2 checksum, e.g. https://orcid.org/0000-0002-1825-0097; or blank. Got "{{ orcid }}"
+    {% endif %}
+
+license:
+  type: str
+  # Only licenses whose full official text this template ships verbatim are
+  # offered (so LICENSE is valid on generation). Add Apache-2.0 / GPL-3.0 by
+  # dropping their official text into the template first.
+  help: "SPDX license identifier"
+  choices:
+    MIT: "MIT"
+    BSD 3-Clause: "BSD-3-Clause"
+  default: "MIT"
+
+# ---------------------------------------------------------------------------
+# Compute & data
+# Only options the template actually implements + are exercised by CI are
+# offered. Others (LSF, DataLad, git-LFS, Quarto, reveal.js, pptx, neuro/imaging
+# schemas, PythonTeX) are intentionally omitted until implemented and tested —
+# see docs/structure.md "Roadmap".
+# ---------------------------------------------------------------------------
+compute_backend:
+  type: str
+  help: "Snakemake execution backend for heavy stages"
+  choices:
+    Local workstation only: "local"
+    SLURM cluster: "slurm"
+  default: "local"
+
+data_versioning:
+  # Fixed to DVC for now (not prompted). DataLad / git-LFS are roadmap; this stays
+  # a variable so templates reference {{ data_versioning }} and a future option can
+  # re-enable the prompt.
+  type: str
+  when: false
+  default: "dvc"
+
+use_apptainer:
+  type: bool
+  help: "Ship an Apptainer/Singularity definition for reproducible HPC runs?"
+  default: true
+
+container_registry:
+  type: str
+  help: "Container registry for the built image (used in containers/ + release docs)"
+  default: "ghcr.io/OWNER/{{ project_slug }}"
+  when: "{{ use_apptainer }}"
+
+# ---------------------------------------------------------------------------
+# Docs & reporting
+# ---------------------------------------------------------------------------
+docs_backend:
+  type: str
+  help: "Documentation site generator"
+  choices:
+    Sphinx + numpydoc: "sphinx"
+    MkDocs Material: "mkdocs"
+  default: "sphinx"
+
+# Manuscripts ship as LaTeX (built with the shared lab.cls); slides ship as Beamer
+# (its OWN class — it does not load lab.cls, but shares fonts.tex + the generated
+# theme colours). Quarto / reveal.js / pptx are roadmap.
+# Data domain is fixed to tabular/parquet for now (NWB / OME-TIFF are roadmap).
+
+notebook_tool:
+  type: str
+  help: "Scratch-notebook tool for exploratory/ (narrative tutorials live in docs/)"
+  choices:
+    marimo (pure-.py, reactive, git-friendly, reproducible): "marimo"
+    Jupyter (+ nbstripout to strip outputs before commit): "jupyter"
+    None: "none"
+  default: "marimo"
+
+use_lab_tracker:
+  type: bool
+  help: "Include Lab Tracker agent guidance (system of record for research reasoning)?"
+  default: true
+
+lab_tracker_project_id:
+  type: str
+  help: "Lab Tracker project id to link this repo to (blank to set later)"
+  default: ""
+  when: "{{ use_lab_tracker }}"
+
+# ---------------------------------------------------------------------------
+# Example content
+# ---------------------------------------------------------------------------
+include_example:
+  type: bool
+  help: "Ship a tiny synthetic dataset + example pipeline stage (doubles as CI fixture)?"
+  default: true

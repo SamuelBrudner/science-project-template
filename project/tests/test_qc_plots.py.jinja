@@ -1,0 +1,91 @@
+"""Tests for the cohort QC figure kernel — validates CONTENT, not file existence.
+
+Delete with the example stage.
+"""
+
+import matplotlib
+
+matplotlib.use("Agg")
+import pandas as pd  # noqa: E402
+
+from {{ package_name }}.qc_plots import cohort_qc_figure, select_exemplars  # noqa: E402
+
+QC = pd.DataFrame(
+    {
+        "sample_id": ["s01", "s06", "s07"],
+        "condition": ["control", "treated", "control"],
+        "n": [4, 2, 3],
+        "n_missing": [0, 0, 1],
+        "mean": [1.0, 1.2, 1.0],
+        "sd": [0.05, 0.03, 0.07],
+        "qc_pass": [True, False, False],
+    }
+)
+RAW = {
+    "typical\ns01": pd.Series([1.0, 1.1, 0.9, 1.0]),
+    "underpowered\ns06": pd.Series([1.2, 1.25]),
+}
+
+
+def test_figure_has_four_metric_panels() -> None:
+    fig = cohort_qc_figure(QC, min_n=3, raw=RAW)
+    assert len(fig.axes) == 4  # n, n_missing, mean±sd, raw exemplars
+
+
+def test_n_panel_draws_the_min_n_threshold() -> None:
+    fig = cohort_qc_figure(QC, min_n=3, raw=RAW)
+    threshold_ys = [ln.get_ydata()[0] for ln in fig.axes[0].get_lines()]
+    assert 3 in threshold_ys  # the min_n reference line
+
+
+def test_pass_and_fail_markers_are_distinct() -> None:
+    fig = cohort_qc_figure(QC, min_n=3, raw=RAW)
+    faces = fig.axes[0].collections[0].get_facecolors()
+    alphas = {round(float(rgba[3]), 2) for rgba in faces}
+    assert len(alphas) >= 2  # filled (pass) vs open/transparent (fail)
+
+
+# --- exemplar selection ----------------------------------------------------
+
+COHORT = pd.DataFrame(
+    {
+        "sample_id": ["s01", "s02", "s03", "s04", "s05", "s06", "s07"],
+        "n": [4, 4, 4, 4, 3, 2, 3],
+        "n_missing": [0, 0, 0, 0, 0, 0, 1],
+        "qc_pass": [True, True, True, True, True, False, False],
+    }
+)
+
+
+def test_exemplars_are_unique_and_cover_all_roles() -> None:
+    ex = select_exemplars(COHORT, min_n=3)
+    assert {"typical", "edge", "stress", "audit"} >= set(ex)
+    assert len(set(ex.values())) == len(ex)  # no sample fills two roles
+
+
+def test_edge_is_the_borderline_min_n_sample() -> None:
+    ex = select_exemplars(COHORT, min_n=3)
+    assert ex["edge"] == "s05"  # the shipped edge case (n == min_n), not omitted
+    assert ex["stress"] in {"s06", "s07"}  # a QC-failed sample
+
+
+def test_all_pass_cohort_has_no_stress_role() -> None:
+    all_pass = COHORT[COHORT["qc_pass"]].reset_index(drop=True)
+    ex = select_exemplars(all_pass, min_n=3)
+    assert "stress" not in ex
+    assert ex["typical"] != ex["edge"]
+
+
+def test_typical_is_outlier_robust() -> None:
+    # An n=100 outlier must NOT be chosen as "typical" over a [3,5,6] cohort.
+    cohort = pd.DataFrame(
+        {
+            "sample_id": ["a", "b", "c", "big"],
+            "n": [3, 5, 6, 100],
+            "n_missing": [0, 0, 0, 0],
+            "qc_pass": [True, True, True, True],
+        }
+    )
+    ex = select_exemplars(cohort, min_n=3)
+    assert ex["typical"] != "big"  # nearest-median wins, not the max
+    assert "audit" in ex  # a non-exemplar spot-check unit is provided

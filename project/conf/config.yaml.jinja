@@ -1,0 +1,18 @@
+# Hydra root config — scientific parameters, validated by metadata.schemas.AppConfig
+# and resolved into results/resolved_config.yaml (a declared pipeline input, so
+# changing a value here invalidates downstream outputs). No magic numbers in code.
+defaults:
+  - _self_
+
+seed: 20260101
+
+# Example analysis parameters (delete with the example stage).
+example:
+  value_col: "signal"
+  group_col: "condition"
+  units: "a.u."
+
+# QC thresholds.
+qc:
+  min_n: 3                      # a sample passes if it has >= min_n non-missing measurements
+  min_samples_per_condition: 2  # each condition needs >= this many PASSING samples, else fail

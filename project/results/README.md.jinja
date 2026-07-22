@@ -1,0 +1,24 @@
+# `results/` — Generated outputs (DO NOT EDIT)
+
+Everything here is a **build target**: produced by the pipeline, regenerable, and
+gitignored. Figures (`figures/light/`, `figures/dark/`) and tables (`tables/`).
+
+**Never edit anything in this folder by hand.** Your changes will be silently
+overwritten the next time the pipeline runs. To change a result, edit the code in
+`src/` or a parameter in `conf/` and rerun:
+
+```bash
+snakemake results/figures/light/fig3.pdf   # rebuild one target
+snakemake                                  # rebuild everything
+```
+
+## Figures: light vs dark
+- `figures/light/` — canonical, for print and papers (dark-on-white).
+- `figures/dark/` — derived, for on-screen slides (light-on-transparent).
+
+Both come from the same plotting code and the palette in `conf/theme/`. See the
+theme system in [`../conf/theme/`](../conf/theme/).
+
+## This is for *generated* figures only
+Hand-drawn schematics and diagrams are **inputs**, not outputs — they live in
+[`../assets/figures/`](../assets/figures/) and are git-tracked.

@@ -1,0 +1,47 @@
+"""Tests for the QC helpers, including edge and failure cases.
+
+Delete with the example stage.
+"""
+
+import numpy as np
+import pandas as pd
+
+from {{ package_name }}.qc import summarize_sample, underpowered_conditions
+
+
+def test_summarize_sample_pass() -> None:
+    m = summarize_sample(pd.Series([1.0, 2.0, 3.0]), min_n=3)
+    assert m["n"] == 3
+    assert m["n_missing"] == 0
+    assert m["qc_pass"] is True
+    assert m["mean"] == 2.0
+
+
+def test_summarize_sample_fails_below_min_n() -> None:
+    assert summarize_sample(pd.Series([1.0, 2.0]), min_n=3)["qc_pass"] is False
+
+
+def test_summarize_sample_missing_fails() -> None:
+    m = summarize_sample(pd.Series([1.0, np.nan, 3.0]), min_n=2)
+    assert m["n"] == 2
+    assert m["n_missing"] == 1
+    assert m["qc_pass"] is False
+
+
+def test_underpowered_all_pass() -> None:
+    qc = pd.DataFrame(
+        {"condition": ["a", "a", "b", "b"], "qc_pass": [True, True, True, True]}
+    )
+    assert underpowered_conditions(qc, 2) == {}
+
+
+def test_underpowered_flags_short_condition() -> None:
+    qc = pd.DataFrame(
+        {"condition": ["a", "a", "b", "b"], "qc_pass": [True, True, True, False]}
+    )
+    assert underpowered_conditions(qc, 2) == {"b": 1}
+
+
+def test_underpowered_all_fail() -> None:
+    qc = pd.DataFrame({"condition": ["a", "b"], "qc_pass": [False, False]})
+    assert underpowered_conditions(qc, 1) == {"a": 0, "b": 0}

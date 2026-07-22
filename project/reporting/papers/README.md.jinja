@@ -1,0 +1,24 @@
+# `reporting/papers/` — Manuscripts
+
+One folder per paper, named `YYYY-shortslug/` (e.g. `2026-mechanism/`).
+
+```
+2026-mechanism/
+├── manuscript.tex        # or manuscript.qmd (LaTeX)
+├── figures/              # references ../../results/figures/light/
+└── submissions/          # FROZEN snapshots, one per milestone
+```
+
+## Lifecycle → git
+- Draft on a branch; open a PR to merge into `main`.
+- Tag milestones: `submitted-v1`, `revision-1`, `published`.
+- Because figures are build targets, a reviewer's "redo excluding subject 3" is a
+  config change + rerun + new tag — not a manual hunt through old files.
+
+## `submissions/` — freeze, don't reference
+At each submission/revision, **copy** the built manuscript PDF *and the exact
+figures it used* into `submissions/<milestone>/`. This is the one place copying is
+correct: a submission is a historical fact you must be able to reconstruct byte
+for byte, even after the analysis moves on.
+
+Build with the shared `../_assets/lab.cls` + `refs.bib`.

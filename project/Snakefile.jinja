@@ -1,0 +1,38 @@
+# Snakefile — the pipeline DAG (data/raw -> results). See docs/structure.md.
+# Run:  snakemake --cores 1
+{%- if compute_backend == "slurm" %}
+#       snakemake --profile workflow/profiles/slurm   # HPC (jobs run in the container)
+{%- endif %}
+#
+# Scientific parameters live in conf/ (Hydra) and are resolved+validated into
+# results/resolved_config.yaml, which downstream rules consume as a declared
+# input. workflow/config.yaml stays thin (paths only).
+
+configfile: "workflow/config.yaml"
+{% if use_apptainer %}
+# Global container: with `software-deployment-method: apptainer` (set in the
+# SLURM profile), Snakemake runs EACH job inside this image on the compute node
+# -- not just the submitting process. Build it: apptainer build container.sif
+# containers/apptainer.def
+container: "container.sif"
+{% endif %}
+
+# Resolve + validate the Hydra config (results/resolved_config.yaml).
+include: "workflow/rules/config.smk"
+# Theme is a build target every figure depends on (SSOT: conf/theme).
+include: "workflow/rules/theme.smk"
+{% if include_example %}include: "workflow/rules/example.smk"
+{% endif %}# Provenance (run identity + registry producer) is ALWAYS built. Included after
+# the example so its sample/artifact inputs are in scope when the example is on.
+include: "workflow/rules/provenance.smk"
+
+
+rule all:
+    input:
+        "results/resolved_config.yaml",
+        "reporting/_assets/theme-colors.tex",
+        "results/provenance.json",{% if include_example %}
+        "results/figures/light/example_group_means.pdf",
+        "results/figures/dark/example_group_means.pdf",
+        "results/figures/light/qc_distribution.pdf",
+        "results/figures/dark/qc_distribution.pdf",{% endif %}

@@ -1,0 +1,52 @@
+"""Cohort QC distribution figure: the actual QC metrics + raw exemplars.
+
+Thin wrapper over {{ package_name }}.qc_plots.cohort_qc_figure (unit-tested).
+Reads the FULL QC summary (every sample, passers and excluded) plus a few raw
+exemplar units (a typical pass, an underpowered fail, a missing-value fail) so the
+figure shows why samples were excluded — n vs min_n, n_missing, mean±sd, and raw
+values. Light + dark, from the theme. No `from __future__` import (Snakemake
+prepends a preamble to script: files).
+"""
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import pandas as pd  # noqa: E402
+import yaml  # noqa: E402
+
+from {{ package_name }}.qc_plots import cohort_qc_figure, select_exemplars  # noqa: E402
+
+snakemake = snakemake  # noqa: F821
+
+cfg = yaml.safe_load(open(snakemake.input.config))
+min_n = int(cfg["qc"]["min_n"])
+value_col = cfg["example"]["value_col"]
+
+# sample_id stays a string ("001" not int 1); other columns keep their dtypes.
+qc = pd.read_csv(
+    snakemake.input.qc_summary, dtype={"sample_id": str}, keep_default_na=False
+).sort_values("sample_id")
+qc = qc.reset_index(drop=True)
+manifest = pd.read_csv(snakemake.input.manifest, dtype=str, keep_default_na=False)
+raw_path = dict(zip(manifest["sample_id"], manifest["file"], strict=False))
+
+# Unique, deterministic exemplars (typical / edge / stress) — see qc_plots.
+exemplars = select_exemplars(qc, min_n)
+raw = {
+    f"{role}\n{sid}": pd.read_csv(raw_path[sid])[value_col]
+    for role, sid in exemplars.items()
+}
+
+
+def plot(style: str, out_pdf: str, out_png: str) -> None:
+    """Render the cohort QC figure under one theme style, deterministically."""
+    with matplotlib.style.context(style):
+        fig = cohort_qc_figure(qc, min_n, raw)
+        fig.savefig(out_pdf, metadata={"CreationDate": None})  # deterministic PDF
+        fig.savefig(out_png)
+        plt.close(fig)
+
+
+plot(snakemake.input.mpl_light, snakemake.output.light_pdf, snakemake.output.light_png)
+plot(snakemake.input.mpl_dark, snakemake.output.dark_pdf, snakemake.output.dark_png)

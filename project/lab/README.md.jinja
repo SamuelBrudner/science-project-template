@@ -1,0 +1,17 @@
+# `lab/` — Wet-lab protocols & records
+
+The human/bench side of the project: protocols, reagent and sample notes, and the
+link to the electronic lab notebook (ELN). This connects physical experiments to
+the `metadata/` manifests that name the resulting data files.
+
+## What belongs here
+- Protocols and SOPs (versioned as text/PDF).
+- Notes that give context to samples — but the machine-readable
+  `sample_id → condition → file` mapping lives in [`../metadata/`](../metadata/),
+  validated.
+
+## Rules
+- **People maintain this folder.** Automated agents do **not** fabricate sample
+  manifests, protocol steps, or measurements here — that would invent provenance.
+- Prefer the ELN as system of record; keep this folder as the repo-side reference
+  and pointer to it.

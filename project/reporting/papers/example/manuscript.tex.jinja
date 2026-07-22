@@ -1,0 +1,26 @@
+% Example manuscript — builds with the shared lab.cls + generated theme colours
+% and the pipeline's light figure. Build from repo root:  make -C reporting paper
+% Delete this example once a real manuscript exists.
+\documentclass[11pt]{lab}
+\usepackage[margin=1in]{geometry}
+{% raw %}\graphicspath{{results/figures/light/}}{% endraw %}
+
+\title{ {{- project_name_tex -}} }
+\author{ {{- author_tex -}} }
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Results}
+Figures are pipeline build targets pulled from \texttt{results/figures/light/}.
+The colour \textcolor{accent}{accent} comes from \texttt{conf/theme} via the
+generated \texttt{theme-colors.tex}, so text and figures share one palette.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.6\linewidth]{example_group_means}
+  \caption{Example: group means with SEM and individual observations.}
+\end{figure}
+
+\end{document}

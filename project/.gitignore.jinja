@@ -1,0 +1,71 @@
+# --- Secrets (never commit) ---
+.env
+*.key
+*.pem
+secrets/
+
+# --- Environment / build ---
+conda_env/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+_wheel/
+.snakemake/
+
+# --- Data (versioned by {{ data_versioning }}, not git) ---
+data/raw/*
+data/interim/*
+data/processed/*
+{%- if data_versioning == "dvc" %}
+# keep DVC pointer files and the .gitkeep/READMEs
+!data/**/*.dvc
+{%- endif %}
+!data/**/README.md
+!data/**/.gitkeep
+
+# --- Generated outputs (regenerable build targets) ---
+# Re-include directories (!results/**/) so the keep/README negations can apply.
+results/**
+!results/**/
+!results/**/README.md
+!results/**/.gitkeep
+
+# --- Generated theme artifacts (rendered from conf/theme by the pipeline) ---
+src/{{ package_name }}/_generated/
+reporting/_assets/theme-colors*.tex
+# --- Resolved config artifact (regenerated from conf/) ---
+results/resolved_config.yaml
+
+# --- Reporting build artifacts ---
+reporting/**/*.aux
+reporting/**/*.log
+reporting/**/*.out
+reporting/**/*.pdf
+!reporting/**/submissions/**/*.pdf   # frozen snapshots are kept
+reporting/**/*.synctex.gz
+reporting/**/*.bbl
+reporting/**/*.blg
+reporting/**/*.nav
+reporting/**/*.snm
+reporting/**/*.toc
+
+# --- Docs build ---
+docs/_build/
+site/
+
+# --- Containers / large build artifacts ---
+*.sif
+container.sif
+
+# --- OS ---
+.DS_Store
+
+# Run-registry lock (transient)
+metadata/.runs.csv.lock

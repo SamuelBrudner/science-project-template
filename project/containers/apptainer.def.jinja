@@ -1,0 +1,31 @@
+Bootstrap: docker
+# Pinned to a specific version. For bit-reproducibility, pin by digest instead:
+#   From: mambaorg/micromamba@sha256:<digest>
+From: mambaorg/micromamba:1.5.10
+
+%files
+    conda-lock.yml /tmp/conda-lock.yml
+    pyproject.toml /opt/app/pyproject.toml
+    src /opt/app/src
+
+%post
+    # Install the EXACT locked environment (no fail-open fallback).
+    micromamba install -y -n base -f /tmp/conda-lock.yml
+    micromamba clean -a -y
+    # Install the project itself so `import {{ package_name }}` works in-container.
+    /opt/conda/bin/pip install --no-deps /opt/app
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/bin:$PATH
+
+%labels
+    Project {{ project_name }}
+    Maintainer {{ author }}
+    Registry {{ container_registry }}
+
+%help
+    Reproducible environment for {{ project_name }}.
+    Build:  apptainer build container.sif containers/apptainer.def
+    Run:    apptainer exec container.sif snakemake --cores 2
+    Requires a committed conda-lock.yml (conda-lock lock -p linux-64 -p osx-arm64).

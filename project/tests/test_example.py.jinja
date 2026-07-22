@@ -1,0 +1,17 @@
+"""Tests for the example kernel. Delete with the example stage."""
+
+import numpy as np
+import pandas as pd
+
+from {{ package_name }}.example import group_stats
+
+
+def test_group_stats_mean_sem_n() -> None:
+    frame = pd.DataFrame(
+        {"condition": ["a", "a", "a", "b"], "signal": [1.0, 3.0, 2.0, 10.0]}
+    )
+    out = group_stats(frame, value="signal", by="condition")
+    a = out[out["condition"] == "a"].iloc[0]
+    assert a["mean"] == 2.0
+    assert a["n"] == 3
+    assert np.isclose(a["sem"], 1.0 / np.sqrt(3))  # sd=1.0, sem=sd/sqrt(n)

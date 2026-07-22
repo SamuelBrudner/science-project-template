@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# One-time data-versioning bootstrap. Run once after cloning, BEFORE `dvc pull`.
+# DVC is not initialized in the template (it must run in a git repo); this does it.
+set -euo pipefail
+
+if ! command -v dvc >/dev/null 2>&1; then
+  echo "dvc not found — activate the conda env first (see REPRODUCE.md)." >&2
+  exit 1
+fi
+
+if [ ! -d .dvc ]; then
+  dvc init
+  echo "Initialized DVC. Next, add a remote and pull (once data has been pushed):"
+  echo "  dvc remote add -d storage <url>/{{ project_slug }}"
+  echo "  dvc pull"
+else
+  echo ".dvc already initialized."
+fi

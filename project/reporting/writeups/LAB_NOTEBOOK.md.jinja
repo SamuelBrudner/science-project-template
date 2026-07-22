@@ -1,0 +1,18 @@
+# Lab Notebook — {{ project_name }}
+
+Chronological record of **Runs** — each a computational implementation of the
+project with a given set of scientific parameters. (Software fixes/refactors are
+Git commits, not new runs; see `AGENTS.md`.)
+
+Generate a stub for the current run and fill in the human-owned fields:
+
+```bash
+python scripts/register_run.py "short note"          # log it in metadata/runs.csv
+python scripts/lab_notebook_entry.py >> reporting/writeups/LAB_NOTEBOOK.md
+```
+
+Machine fields (`execution_id`, `artifact_id`, parameters, git) are pulled from
+`results/provenance.json`; **a person writes** the objective, what worked / did
+not, and the biological/statistical interpretation.
+
+<!-- newest entries appended below this line -->

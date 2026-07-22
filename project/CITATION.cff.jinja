@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: {{ project_name | tojson }}
+{% if project_description %}abstract: {{ project_description | tojson }}
+{% endif %}type: software
+authors:
+  - family-names: {{ author_family | tojson }}
+    given-names: {{ author_given | tojson }}
+{% if orcid %}    orcid: {{ orcid | tojson }}
+{% endif %}version: 0.1.0
+license: {{ license }}

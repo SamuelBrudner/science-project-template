@@ -1,0 +1,36 @@
+# `exploratory/` — Scratch notebooks (disposable)
+
+Two very different jobs get called "notebooks"; this directory holds only the
+**first** kind:
+
+- **Scratch / exploration (HERE).** Looking at data, trying an idea. Disposable,
+  read by no one later, held to no lint or reproducibility standard. Nothing here
+  is load-bearing.
+- **Narrative / tutorial (NOT here → `docs/`).** A curated explanation meant to be
+  *read and kept true* — the tutorial that walks through the library/pipeline. That
+  lives in `docs/` and is **executed on every docs build**, so it can't silently
+  drift from the code. See `docs/tutorial.{% if docs_backend == "sphinx" %}md{% else %}ipynb{% endif %}`.
+
+The deciding question: **is this notebook disposable, or is it kept and read?**
+Disposable → here. Kept-and-read → `docs/`. Anything that starts producing a real
+figure/table/number **moves into `src/`** (a tested function) called by a
+`workflow/` rule — never regenerated from a notebook.
+
+## Tool: {{ notebook_tool }}
+{% if notebook_tool == "marimo" -%}
+This project uses **marimo**: notebooks are **pure `.py`** — git-diffable, no
+stored outputs, reactive (no stale hidden state), runnable as scripts. Far more
+reproducible than JSON notebooks (~36% of Jupyter notebooks don't re-run). Edit:
+`marimo edit exploratory/example_marimo.py`.
+{% elif notebook_tool == "jupyter" -%}
+This project uses **Jupyter**. The `nbstripout` pre-commit hook strips outputs
+before every commit (clean diffs; no data/credentials leak into git) — **keep it
+installed.** Launch: `jupyter lab`. Consider marimo for new projects: pure-`.py`
+notebooks avoid the out-of-order / hidden-state problems that make `.ipynb`
+unreproducible.
+{% else -%}
+No exploration tool configured. Re-run `copier update` with a different
+`notebook_tool`, or install marimo / Jupyter yourself.
+{% endif %}
+Everything in `exploratory/` is excluded from ruff/black — exploration is not held
+to library lint standards.

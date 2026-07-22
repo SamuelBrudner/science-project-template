@@ -1,0 +1,24 @@
+# `assets/figures/` — Authored figures (INPUTS, git-tracked)
+
+Figures a **human made** that code cannot regenerate: experimental-design
+schematics, BioRender exports, Illustrator/Inkscape source, hand-drawn diagrams.
+These are treated as *inputs to the build*, like data — precious and versioned.
+
+**Rule of thumb:** if losing the file means redrawing it by hand, it belongs here
+(git-tracked). If a script can remake it, it belongs in `results/figures/`.
+
+## What belongs here
+- Editable source (`.svg`, `.ai`, BioRender `.png`/`.pdf` exports).
+- Keep the editable source *next to* any exported raster/PDF, same basename.
+
+## What does NOT belong here
+- Anything the pipeline plots from data → [`../../results/figures/`](../../results/figures/).
+
+## Composite plates (schematic + data panels)
+Prefer assembling them **programmatically** in a pipeline stage (reads from here +
+`results/`, writes the finished plate to `results/figures/` — stays regenerable).
+Only if a plate is assembled by hand does the finished plate live here, and then
+you knowingly give up regenerability for it.
+
+- Large binaries: use Git LFS (see repo `.gitattributes`).
+- Colors/fonts should match the project theme (`conf/theme/`) where possible.
