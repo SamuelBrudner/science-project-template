@@ -15,6 +15,13 @@ storage policy. Targeted renders cover bench-record authority/locator states and
 blank, configured, and disabled Lab Tracker linkage without multiplying the full
 matrix.
 
+`program_control.py` is the focused second-profile gate. It proves the render
+contains the governance/registry surface and none of the research compute/data
+surface, exercises valid and invalid registry state plus registered-record
+immutability, compares default research output with `v0.2.0`, performs a genuine
+`v0.2.0` → `v0.3.0` research update, and proves a control-profile update does
+not reintroduce excluded paths or overwrite JSONL/registry state.
+
 It lives at the **template root** — outside `project/` (the `_subdirectory` Copier
 renders) — so it ships and runs with the published template but is never copied
 into generated projects. `.github/workflows/template-ci.yml` runs it on every push.
@@ -25,6 +32,8 @@ into generated projects. `.github/workflows/template-ci.yml` runs it on every pu
 # From the template root (auto-detects this repo as the template):
 python template-tests/check.py                 # all presets + contracts + special
 python template-tests/check.py default --fast  # one preset, skip notebook exec
+python template-tests/check.py program_control # focused profile + update gate
+python template-tests/program_control.py        # equivalent standalone command
 python template-tests/check.py contracts       # fast 96-render contract only
 python template-tests/contracts.py             # equivalent standalone command
 ```

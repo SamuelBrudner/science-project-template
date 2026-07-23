@@ -1,3 +1,15 @@
+{% if project_profile == "program_control" -%}
+site_name: {{ project_name | tojson }}
+theme:
+  name: material
+docs_dir: docs
+plugins:
+  - search
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Operating model: operating-model.md
+{% else -%}
 site_name: {{ project_name | tojson }}
 theme:
   name: material
@@ -11,3 +23,4 @@ nav:
   - Home: index.md
   - Tutorial: tutorial.ipynb
   - Structure: structure.md
+{% endif -%}

@@ -1,0 +1,39 @@
+# Architecture
+
+## Control plane
+
+This repository owns program gates, interface approval, compatibility records,
+immutable registries, and cross-repository dependency state. It contains no
+scientific implementation and never launches a producer or consumer pipeline.
+
+## Compute repositories
+
+Producer repositories own acquired-input metadata, manifests, preprocessing,
+representation code/training, telemetry, checkpoints, exports, and producer
+jobs. Consumer repositories own ingestion, scientific measures, null models,
+validation, statistics, figures, reporting, and consumer jobs.
+
+An implementation task remains in its owning repository. A program Bead links
+the local task only when coordination, a gate, or another repository depends on
+it.
+
+## Interface boundary
+
+The public producer hosts the canonical data-interface schema and valid/invalid
+fixtures so its CI never depends on a private control repository. Consumers pin
+the producer contract commit and schema digest. This repository registers the
+approved producer revision, consumer revision, schema hash, and conformance
+result.
+
+Artifacts cross the boundary through durable URIs plus full SHA-256 identities.
+They never cross through sibling imports, unregistered workstation paths, Git
+submodules, copied source trees, or payloads committed here.
+
+## Trust boundaries
+
+- `.beads/issues.jsonl` is mutable operational coordination state.
+- ADRs are append-only human-accepted decisions.
+- Registry drafts are reviewable; registered records are immutable.
+- Schemas are immutable within a released version directory.
+- Source repositories and artifact stores remain authoritative for code and
+  payload bytes.

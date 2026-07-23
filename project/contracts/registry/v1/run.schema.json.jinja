@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/{{ project_slug }}/contracts/registry/v1/run.schema.json",
+  "title": "{{ project_name }} run registry record v1",
+  "x-registry-prefix": "{{ registry_prefix }}",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "record_type",
+    "id",
+    "lifecycle_state",
+    "owner_repository",
+    "program_bead",
+    "created_at",
+    "sha256",
+    "provenance",
+    "run_kind",
+    "source_commits",
+    "split_semantics",
+    "inputs",
+    "outputs",
+    "qc_verdict",
+    "preregistered_gates"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "v1"
+    },
+    "record_type": {
+      "const": "run"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^{{ registry_prefix }}-run-[0-9]{8}-[0-9]{3}$"
+    },
+    "lifecycle_state": {
+      "enum": [
+        "draft",
+        "registered",
+        "deprecated"
+      ]
+    },
+    "owner_repository": {
+      "type": "string",
+      "pattern": "^{{ registry_prefix }}-repo-[0-9]{3}$"
+    },
+    "program_bead": {
+      "type": "string",
+      "pattern": "^{{ registry_prefix }}-[A-Za-z0-9._-]+$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "sha256"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "pattern": "^{{ registry_prefix }}-[a-z0-9][a-z0-9-]*$"
+          },
+          "uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "record_id"
+            ]
+          },
+          {
+            "required": [
+              "uri"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "references": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^{{ registry_prefix }}-[a-z0-9][a-z0-9-]*$"
+      },
+      "default": []
+    },
+    "supersedes": {
+      "type": "string",
+      "pattern": "^{{ registry_prefix }}-[a-z0-9][a-z0-9-]*$"
+    },
+    "run_kind": {
+      "enum": [
+        "smoke",
+        "exploratory",
+        "confirmatory"
+      ]
+    },
+    "source_commits": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{40}$"
+      }
+    },
+    "split_semantics": {
+      "enum": [
+        "bird_disjoint",
+        "within_bird_directory_holdout",
+        "descriptive_no_holdout"
+      ]
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^{{ registry_prefix }}-[a-z0-9][a-z0-9-]*$"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^{{ registry_prefix }}-[a-z0-9][a-z0-9-]*$"
+      }
+    },
+    "qc_verdict": {
+      "enum": [
+        "pending",
+        "pass",
+        "fail"
+      ]
+    },
+    "preregistered_gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "description": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

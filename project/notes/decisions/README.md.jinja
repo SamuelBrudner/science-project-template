@@ -1,3 +1,21 @@
+{% if project_profile == "program_control" -%}
+# `notes/decisions/` — accepted program decisions
+
+Record each consequential, human-accepted architectural, scope, interface, or
+scientific decision as `YYYY-MM-DD-short-slug.md`. Include:
+
+- status (`accepted`, `superseded`, or `deprecated`) and acceptance date;
+- context, decision, and alternatives considered;
+- rationale and evidence/registry pointers;
+- consequences, owner, and revisit condition; and
+- links to related program Beads and superseding ADRs.
+
+Agents may draft a record after the user decides; they may not mark acceptance
+or invent evidence. ADRs record decisions, not live task status. Never rewrite
+an accepted ADR to change history: add a dated successor and link both records.
+
+The root [`README.md`](../../README.md) contract remains authoritative.
+{% else -%}
 # `notes/decisions/` — Human-accepted decision records
 
 {% if use_lab_tracker -%}
@@ -22,3 +40,4 @@ configuration, metadata, or reporting.
 {% endif %}
 
 The root [`README.md`](../../README.md) contract remains authoritative.
+{% endif -%}

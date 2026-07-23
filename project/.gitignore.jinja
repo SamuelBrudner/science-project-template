@@ -1,3 +1,31 @@
+{% if project_profile == "program_control" -%}
+# Secrets (never commit)
+.env
+*.key
+*.pem
+secrets/
+
+# Python/tool caches
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Documentation build
+site/
+
+# OS/editor state
+.DS_Store
+*~
+
+# Deliberately do not ignore Beads databases, daemon state, sockets, or local
+# path files: scripts/validate_registry.py must see and reject them.
+{% else -%}
 # --- Secrets (never commit) ---
 .env
 *.key
@@ -88,3 +116,4 @@ metadata/provenance/.*.tmp
 # ignored: DVC must be able to inspect their payload paths, and a crash-leftover
 # stage should be visible to operators instead of being silently hidden.
 reporting/**/.deliveries.lock
+{% endif -%}

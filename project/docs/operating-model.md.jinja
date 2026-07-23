@@ -1,0 +1,63 @@
+# Operating model
+
+## Authorities
+
+| Question | Authority |
+| --- | --- |
+| What cross-repository work is active or blocked? | Program `.beads/issues.jsonl` |
+| How is a local code change implemented? | The owning repository's local task system |
+| What durable gate must pass? | `ROADMAP.md` |
+| What scope/architecture/scientific choice was accepted? | Dated ADR |
+| What exact artifact, run, repository, or contract is approved? | Immutable registry record |
+| Where are source and payload bytes? | The owning repository or durable artifact store |
+
+Do not mirror live state between authorities. Link by stable ID instead.
+
+## Beads cutover
+
+Before cutover, stop source-repository Beads daemons and flush each database to
+JSONL without changing branches or dirty work. For every nonclosed source issue,
+add exactly one row to `docs/migration/beads-crosswalk.csv`: keep locally, move
+to a program Bead, supersede by a named issue, close as duplicate, park, or
+defer. Closed history remains in its original repository.
+
+After cutover, `.beads/issues.jsonl` is the only status authority. The Beads CLI
+may also commit its declarative `config.yaml`, `metadata.json`, `README.md`, and
+`interactions.jsonl` support files; `config.yaml` must retain `no-db: true` and
+the configured issue prefix. SQLite databases, daemon metadata, PID/socket/lock
+files, logs, and local path state are invalid.
+
+## Decision records
+
+A person accepts a consequential program decision. An agent may then draft a
+dated ADR containing context, alternatives, rationale, consequences, owner,
+evidence pointers, and revisit condition. Later changes add a successor ADR;
+they do not rewrite an accepted record.
+
+## Registry lifecycle
+
+1. Create one YAML file whose filename is its record ID.
+2. Keep `lifecycle_state: draft` while facts, hashes, and references are under
+   review.
+3. Set `owner_repository` to a registered repository-record ID. A repository
+   identity may own itself for bootstrap; ownership is validated but is not a
+   scientific dependency edge.
+4. Validate schema, references, acyclicity, durable URIs, and full digests.
+5. A person changes the state to `registered`.
+6. Never edit or delete that registered file. Correct it with a new ID and
+   `supersedes`.
+
+Run records are explicitly `smoke`, `exploratory`, or `confirmatory`; they
+declare exact source commits, split semantics, inputs, outputs, QC verdict, and
+preregistered gates.
+
+## Pull-request gate
+
+```bash
+python scripts/validate_registry.py
+pre-commit run --all-files
+mkdocs build --strict
+```
+
+CI additionally compares registered records with the pull request base and
+rejects edits or deletions.

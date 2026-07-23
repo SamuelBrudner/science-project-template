@@ -1,3 +1,33 @@
+{% if project_profile == "program_control" -%}
+# Program-control checks. Install once with: pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: detect-private-key
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: validate-program-registry
+        name: validate program registry and JSONL control state
+        entry: python scripts/validate_registry.py
+        language: python
+        additional_dependencies:
+          - "jsonschema==4.23.0"
+          - "PyYAML==6.0.2"
+        pass_filenames: false
+{% else -%}
 # Pre-commit hooks. Install once:  pre-commit install && pre-commit install --hook-type commit-msg
 # CI runs: pre-commit run --all-files
 repos:
@@ -70,3 +100,4 @@ repos:
     hooks:
       - id: nbstripout
 {%- endif %}
+{% endif -%}

@@ -1,4 +1,4 @@
-# Copier template — science project (lab work + data + analysis + reporting)
+# Copier template — research projects and scientific program-control repositories
 # Usage:  copier copy gh:SamuelBrudner/science-project-template  path/to/new-project
 # Update: copier update            (run inside a generated project)
 #
@@ -23,6 +23,9 @@ _skip_if_exists:
   - "metadata/runs.csv"
   - "reporting/writeups/LAB_NOTEBOOK.md"
   - "AGENTS.local.md"
+  - ".beads/issues.jsonl"
+  - "metadata/registries/**/*.yaml"
+  - "metadata/registries/**/*.yml"
   - "metadata/provenance/*.json"
   - "lab/records/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*"
   - "notes/decisions/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.md"
@@ -50,6 +53,74 @@ _exclude:
   - "**/.benchmarks/**"
   - ".git"
   - ".DS_Store"
+  # The profiles share identity/legal/update files, but intentionally expose
+  # different operational surfaces. Research is the backward-compatible default.
+  - "{% if project_profile == 'program_control' %}.dvcignore{% endif %}"
+  - "{% if project_profile == 'program_control' %}.env.example{% endif %}"
+  - "{% if project_profile == 'program_control' %}.github/pull_request_template.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}REPRODUCE.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}Snakefile{% endif %}"
+  - "{% if project_profile == 'program_control' %}assets{% endif %}"
+  - "{% if project_profile == 'program_control' %}assets/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}conf{% endif %}"
+  - "{% if project_profile == 'program_control' %}conf/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}containers{% endif %}"
+  - "{% if project_profile == 'program_control' %}containers/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}data{% endif %}"
+  - "{% if project_profile == 'program_control' %}data/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}environment.yml{% endif %}"
+  - "{% if project_profile == 'program_control' %}exploratory{% endif %}"
+  - "{% if project_profile == 'program_control' %}exploratory/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}funding.yaml{% endif %}"
+  - "{% if project_profile == 'program_control' %}lab{% endif %}"
+  - "{% if project_profile == 'program_control' %}lab/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/__init__.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/AGENTS.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/README.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/path_safety.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/provenance{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/provenance/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/provenance_records.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/runs.csv{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/samples.example.csv{% endif %}"
+  - "{% if project_profile == 'program_control' %}metadata/schemas.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}notes/AGENTS.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}notes/README.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}pyproject.toml{% endif %}"
+  - "{% if project_profile == 'program_control' %}reporting{% endif %}"
+  - "{% if project_profile == 'program_control' %}reporting/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}results{% endif %}"
+  - "{% if project_profile == 'program_control' %}results/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}scripts/AGENTS.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}scripts/README.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}scripts/freeze_delivery.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}scripts/lab_notebook_entry.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}scripts/register_run.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}scripts/setup_data.sh{% endif %}"
+  - "{% if project_profile == 'program_control' %}src{% endif %}"
+  - "{% if project_profile == 'program_control' %}src/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}tests{% endif %}"
+  - "{% if project_profile == 'program_control' %}tests/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}workflow{% endif %}"
+  - "{% if project_profile == 'program_control' %}workflow/**{% endif %}"
+  - "{% if project_profile == 'program_control' %}docs/conf.py{% endif %}"
+  - "{% if project_profile == 'program_control' %}docs/index.rst{% endif %}"
+  - "{% if project_profile == 'program_control' %}docs/structure.md{% endif %}"
+  - "{% if project_profile == 'program_control' %}docs/tutorial.ipynb{% endif %}"
+  - "{% if project_profile == 'program_control' %}docs/tutorial.md{% endif %}"
+  # Program-control-only governance surfaces never leak into research renders.
+  - "{% if project_profile == 'research' %}.beads{% endif %}"
+  - "{% if project_profile == 'research' %}.beads/**{% endif %}"
+  - "{% if project_profile == 'research' %}ROADMAP.md{% endif %}"
+  - "{% if project_profile == 'research' %}contracts{% endif %}"
+  - "{% if project_profile == 'research' %}contracts/**{% endif %}"
+  - "{% if project_profile == 'research' %}docs/architecture.md{% endif %}"
+  - "{% if project_profile == 'research' %}docs/operating-model.md{% endif %}"
+  - "{% if project_profile == 'research' %}docs/migration{% endif %}"
+  - "{% if project_profile == 'research' %}docs/migration/**{% endif %}"
+  - "{% if project_profile == 'research' %}metadata/registries{% endif %}"
+  - "{% if project_profile == 'research' %}metadata/registries/**{% endif %}"
+  - "{% if project_profile == 'research' %}scripts/validate_registry.py{% endif %}"
   # NOTE: _exclude matches the RENDERED path, so no .jinja suffix here.
   - "{% if not include_example %}src/*/example.py{% endif %}"
   - "{% if not include_example %}src/*/qc.py{% endif %}"
@@ -97,6 +168,15 @@ _message_after_copy: |
 
   Next steps (run inside the new project directory):
     git init && git add -A && git commit -m "chore: initial project from template"
+  {% if project_profile == 'program_control' %}
+    pre-commit install
+    python scripts/validate_registry.py
+    mkdocs build --strict
+
+  Initialize Beads with prefix "{{ registry_prefix }}" in JSONL-only/no-database
+  mode, then keep cross-repository status in .beads/issues.jsonl. Read README.md
+  for the placement contract and docs/operating-model.md for authority boundaries.
+  {% else %}
     conda env create -f environment.yml -p ./conda_env   # CI uses environment.yml
     conda activate ./conda_env
     pip install -e ".[dev]"
@@ -111,6 +191,18 @@ _message_after_copy: |
   For a byte-reproducible release/container, additionally commit a lock:
     conda-lock lock --file environment.yml -p linux-64 -p osx-arm64   # -> conda-lock.yml
   Read docs/structure.md for the why behind this layout.
+  {% endif %}
+
+# ---------------------------------------------------------------------------
+# Profile
+# ---------------------------------------------------------------------------
+project_profile:
+  type: str
+  help: "Repository profile"
+  choices:
+    Research project (lab work + data + analysis + reporting): "research"
+    Program control (governance + registries; no scientific compute): "program_control"
+  default: "research"
 
 # ---------------------------------------------------------------------------
 # Identity
@@ -138,6 +230,7 @@ project_slug:
 package_name:
   type: str
   help: "Importable Python package name (snake_case, a valid Python identifier)"
+  when: "{{ project_profile == 'research' }}"
   default: "{{ project_slug | lower | replace('-', '_') }}"
   validator: >-
     {%- set kw = ['False','None','True','and','as','assert','async','await',
@@ -154,6 +247,19 @@ project_description:
   type: str
   help: "One-line description (used in package + citation metadata)"
   default: ""
+
+registry_prefix:
+  type: str
+  help: "Lowercase ID prefix for program Beads and registry records"
+  when: "{{ project_profile == 'program_control' }}"
+  default: "{{ project_slug.split('-') | map('first') | join }}"
+  validator: >-
+    {% if not (registry_prefix and registry_prefix.isascii()
+               and registry_prefix == registry_prefix.lower()
+               and registry_prefix[0].isalpha()
+               and registry_prefix.isalnum()) %}
+    registry_prefix must start with a lowercase ASCII letter and contain only lowercase ASCII letters and digits: got "{{ registry_prefix }}"
+    {% endif %}
 
 author_given:
   type: str
@@ -270,6 +376,7 @@ license:
 compute_backend:
   type: str
   help: "Snakemake execution backend for heavy stages"
+  when: "{{ project_profile == 'research' }}"
   choices:
     Local workstation only: "local"
     SLURM cluster: "slurm"
@@ -286,13 +393,14 @@ data_versioning:
 use_apptainer:
   type: bool
   help: "Ship an Apptainer/Singularity definition for reproducible HPC runs?"
-  default: true
+  when: "{{ project_profile == 'research' }}"
+  default: "{{ project_profile == 'research' }}"
 
 container_registry:
   type: str
   help: "Container registry for the built image (used in containers/ + release docs)"
   default: "ghcr.io/OWNER/{{ project_slug }}"
-  when: "{{ use_apptainer }}"
+  when: "{{ project_profile == 'research' and use_apptainer }}"
 
 # ---------------------------------------------------------------------------
 # Docs & reporting
@@ -303,7 +411,8 @@ docs_backend:
   choices:
     Sphinx + numpydoc: "sphinx"
     MkDocs Material: "mkdocs"
-  default: "sphinx"
+  when: "{{ project_profile == 'research' }}"
+  default: "{{ 'sphinx' if project_profile == 'research' else 'mkdocs' }}"
 
 # Manuscripts ship as LaTeX (built with the shared lab.cls); slides ship as Beamer
 # (its OWN class — it does not load lab.cls, but shares fonts.tex + the generated
@@ -317,7 +426,8 @@ notebook_tool:
     marimo (pure-.py, reactive, git-friendly, reproducible): "marimo"
     Jupyter (+ nbstripout to strip outputs before commit): "jupyter"
     None: "none"
-  default: "marimo"
+  when: "{{ project_profile == 'research' }}"
+  default: "{{ 'marimo' if project_profile == 'research' else 'none' }}"
 
 bench_record_authority:
   type: str
@@ -325,13 +435,14 @@ bench_record_authority:
   choices:
     Electronic lab notebook (recommended): "eln"
     This repository (lab/records/): "repository"
+  when: "{{ project_profile == 'research' }}"
   default: "eln"
 
 bench_record_location:
   type: str
   help: "ELN notebook/workspace URL or stable identifier (blank to link later)"
   default: ""
-  when: "{{ bench_record_authority == 'eln' }}"
+  when: "{{ project_profile == 'research' and bench_record_authority == 'eln' }}"
   validator: >-
     {% if bench_record_location != bench_record_location.strip() %}
     bench_record_location cannot have leading or trailing whitespace
@@ -344,13 +455,14 @@ bench_record_location:
 use_lab_tracker:
   type: bool
   help: "Include Lab Tracker agent guidance (system of record for research reasoning)?"
-  default: true
+  when: "{{ project_profile == 'research' }}"
+  default: "{{ project_profile == 'research' }}"
 
 lab_tracker_project_id:
   type: str
   help: "Lab Tracker project id to link this repo to (blank to set later)"
   default: ""
-  when: "{{ use_lab_tracker }}"
+  when: "{{ project_profile == 'research' and use_lab_tracker }}"
   validator: >-
     {% set compact_tracker_id = lab_tracker_project_id
       | replace('-', '') | replace('_', '') | replace('.', '') | replace(':', '') %}
@@ -368,4 +480,5 @@ lab_tracker_project_id:
 include_example:
   type: bool
   help: "Ship a tiny synthetic dataset + example pipeline stage (doubles as CI fixture)?"
-  default: true
+  when: "{{ project_profile == 'research' }}"
+  default: "{{ project_profile == 'research' }}"

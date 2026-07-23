@@ -4,6 +4,43 @@ All notable changes to this Copier template are documented here. This is the
 template's own changelog; generated projects manage their own versions with
 `cz bump`.
 
+## v0.3.0 — Program-control profile
+
+This release adds a second, deliberately non-computational Copier profile while
+keeping `research` as the default and preserving the v0.2.0 research surface.
+
+Highlights:
+
+- Adds `project_profile: research | program_control`. Existing projects acquire
+  the `research` default on update; their scientific layout and option behavior
+  remain unchanged.
+- Renders a program-control repository with a sole-placement README contract,
+  inherited agent rules, stable-gate roadmap, architecture/operating docs,
+  dated ADR home, and JSONL-only Beads authority.
+- Adds one-file-per-record registries for contracts, repositories, datasets,
+  encoders, exports, experiments, runs, and resources, with versioned JSON
+  Schemas and immutable registered-record semantics.
+- Adds a standalone validator and CI/pre-commit gates for schema conformance,
+  full hashes, IDs, references, cycles, registered-record edits, credentials,
+  absolute local paths, SQLite/daemon state, submodules, and prohibited
+  compute/data surfaces.
+- Keeps program-control renders free of Snakemake, DVC, `src/`, scientific
+  environments, data/results/lab/reporting trees, notebooks, containers, and
+  run-registration machinery.
+- Adds focused program render/validator/update coverage and a genuine
+  `v0.2.0`-to-`v0.3.0` research migration check.
+
+### Updating from v0.2.0
+
+Run `copier update --trust` on a clean topic branch. Copier records
+`project_profile: research` by default and does not convert an existing research
+repository into a control repository. Review the normal three-way merge; all
+v0.2.0 preserved paths remain protected.
+
+Choose `program_control` only when creating a new coordination repository.
+Switching an established research project between profiles is a deliberate
+repository migration, not a supported cleanup mechanism.
+
 ## v0.2.0 — Explicit repository contract
 
 This release turns repository placement from convention into a tested contract.

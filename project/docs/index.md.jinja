@@ -1,3 +1,16 @@
+{% if project_profile == "program_control" -%}
+# {{ project_name }}
+
+{{ project_description }}
+
+This site documents the program control plane. The marked Repository contract
+in the root `README.md` is the sole placement authority.
+
+- [Architecture](architecture.md) defines repository and interface boundaries.
+- [Operating model](operating-model.md) defines authorities, immutable registry
+  workflow, and cross-repository coordination.
+- The root `ROADMAP.md` defines stable milestones and gates.
+{% else -%}
 # {{ project_name }}
 
 {{ project_description }}
@@ -5,3 +18,4 @@
 The root [Repository contract](../README.md#repository-contract) is the canonical
 placement map. [Structure](structure.md) explains the design rationale without
 duplicating that contract.
+{% endif -%}
