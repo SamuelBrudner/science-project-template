@@ -1,24 +1,31 @@
-# `assets/figures/` — Authored figures (INPUTS, git-tracked)
+# `assets/figures/` — Non-regenerable authored figures
 
-Figures a **human made** that code cannot regenerate: experimental-design
-schematics, BioRender exports, Illustrator/Inkscape source, hand-drawn diagrams.
-These are treated as *inputs to the build*, like data — precious and versioned.
+## Authority
 
-**Rule of thumb:** if losing the file means redrawing it by hand, it belongs here
-(git-tracked). If a script can remake it, it belongs in `results/figures/`.
+The root [`README.md`](../../README.md) contract defines this as the source home
+for figures that code cannot recreate.
 
-## What belongs here
-- Editable source (`.svg`, `.ai`, BioRender `.png`/`.pdf` exports).
-- Keep the editable source *next to* any exported raster/PDF, same basename.
+## Use this directory for
 
-## What does NOT belong here
-- Anything the pipeline plots from data → [`../../results/figures/`](../../results/figures/).
+Create one folder per authored figure, `assets/figures/<slug>/`, containing:
 
-## Composite plates (schematic + data panels)
-Prefer assembling them **programmatically** in a pipeline stage (reads from here +
-`results/`, writes the finished plate to `results/figures/` — stays regenerable).
-Only if a plate is assembled by hand does the finished plate live here, and then
-you knowingly give up regenerability for it.
+- the editable source when export is possible (`.svg`, `.ai`, or equivalent);
+- any canonical raster/PDF export used by the pipeline or reporting; and
+- `source.yaml` (or a README) naming the title, creator, creation date, authoring
+  tool, editable source, exports, external source/license when applicable, and
+  notes needed to edit it safely.
 
-- Large binaries: use Git LFS (see repo `.gitattributes`).
-- Colors/fonts should match the project theme (`conf/theme/`) where possible.
+Files at or below the repository's 1 MiB Git limit may be committed directly.
+Store larger or frequently changing binary assets with {{ data_versioning }} at
+the same logical path and commit the pointer. This template does not promise Git
+LFS support.
+
+## Do not put here
+
+- A data-derived plot → `results/figures/`.
+- A programmatically assembled composite → `results/figures/`.
+- A one-time copy of a figure sent externally → the artifact's immutable
+  `reporting/.../deliveries/` directory.
+
+A manually assembled composite is an authored asset and belongs here; record
+that non-regenerable choice in its source metadata.

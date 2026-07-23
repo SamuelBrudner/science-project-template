@@ -1,0 +1,14 @@
+# `lab/records/` — Human-created executed bench records
+
+This directory is present only when repository bench-record mode is selected.
+It is the canonical repository home for what actually happened at the bench.
+
+Use one dated, stable record per execution. Record human-supplied facts such as
+protocol/version, operator, timestamps, reagent lots, sample IDs, deviations,
+observations, and links to resulting `metadata/`/`data/raw/` identities. Do not
+embed raw data payloads here.
+
+Records are human-owned and durable. Agents may format or cross-check supplied
+facts but may never invent, infer, or silently repair them. A missing field must
+remain explicit. Read [`../AGENTS.md`](../AGENTS.md) and the root
+[`README.md`](../../README.md) contract before editing.

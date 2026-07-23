@@ -1,8 +1,9 @@
 """Emit a provenance manifest hashing SOURCES and code, not just outputs.
 
 Declared inputs come in three roles (see provenance.smk):
-  * CODE  — root Snakefile / pyproject.toml + code under src/workflow/metadata/conf
-            (excluding docs, tabular data, empty markers, scheduler profiles);
+  * CODE  — root Snakefile / pyproject.toml + computational code under
+            src/workflow/metadata/conf (excluding docs, ledgers, archived
+            provenance, scientific config, tabular data, and profiles);
   * DATA  — raw data, manifest, per-sample QC, derived artifacts incl. figures;
   * ENV   — conda spec/lock, container recipe/image, profiles.
 CODE + DATA content hashes (plus the resolved config) form the ``artifact_id`` —
@@ -23,9 +24,14 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
+import tempfile
 from pathlib import Path
 
 import yaml
+
+sys.path.insert(0, os.getcwd())
+from metadata.path_safety import open_binary_no_follow  # noqa: E402
 
 snakemake = snakemake  # noqa: F821
 
@@ -33,12 +39,46 @@ _CHUNK = 1 << 20  # 1 MiB
 
 
 def sha256(path: str) -> str:
-    """Hex SHA-256 of a file, streamed so large files don't exhaust memory."""
+    """Hex SHA-256 of an explicitly external file, streamed in chunks."""
     h = hashlib.sha256()
     with open(path, "rb") as fh:
         for chunk in iter(lambda: fh.read(_CHUNK), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def sha256_repo(path: str) -> str:
+    """Stream-hash one real repository file without following symlinks."""
+    h = hashlib.sha256()
+    with open_binary_no_follow(Path.cwd(), Path(path), label="provenance input") as fh:
+        for chunk in iter(lambda: fh.read(_CHUNK), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def write_json_atomic(path: str, payload: dict) -> None:
+    """Write JSON crash-safely without exposing a truncated current manifest."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(
+        dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(fd, "w") as fh:
+            json.dump(payload, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, target)
+        dir_fd = os.open(str(target.parent), getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def git_state() -> dict:
@@ -70,11 +110,19 @@ code_paths = set(getattr(snakemake.input, "code", []))
 env_paths = set(getattr(snakemake.input, "env", []))
 data_paths = [p for p in snakemake.input if p not in code_paths and p not in env_paths]
 
-inputs = {p: sha256(p) for p in sorted(data_paths)}
-code = {p: sha256(p) for p in sorted(code_paths)}
+inputs = {p: sha256_repo(p) for p in sorted(data_paths)}
+code = {p: sha256_repo(p) for p in sorted(code_paths)}
+# Preserve the complete legacy ``inputs`` map while making source/output roles
+# explicit for humans and delivery tooling. Generated analysis-ready data belongs
+# in data/processed; terminal build products belong in results/ or reporting.
+_GENERATED_PREFIXES = ("data/processed/", "results/", "reporting/_assets/")
+artifacts = {
+    p: digest for p, digest in inputs.items() if p.startswith(_GENERATED_PREFIXES)
+}
+sources = {p: digest for p, digest in inputs.items() if p not in artifacts}
 # Full content hashes of every env file (streamed — the container image may be
 # multi-GB), so two same-sized images are distinguishable.
-env_hashes = {p: sha256(p) for p in sorted(env_paths)}
+env_hashes = {p: sha256_repo(p) for p in sorted(env_paths)}
 
 
 def active_container() -> dict | None:
@@ -160,7 +208,10 @@ def realized_environment() -> dict:
 
 container = active_container()
 realized = realized_environment()
-resolved_config = yaml.safe_load(Path(snakemake.input.config).read_text())
+with open_binary_no_follow(
+    Path.cwd(), Path(snakemake.input.config), label="resolved configuration"
+) as config_handle:
+    resolved_config = yaml.safe_load(config_handle)
 
 # artifact_id — the STABLE content identity of the RESULT: resolved params + every
 # data input + every code file. Two runs with byte-identical inputs/outputs share
@@ -190,6 +241,8 @@ prov = {
     "artifact_id": artifact_id,
     "execution_id": execution_id,
     "inputs": inputs,
+    "sources": sources,
+    "artifacts": artifacts,
     "code": code,
     "git": git_state(),
     "environment": {
@@ -203,4 +256,4 @@ prov = {
     "resolved_config": resolved_config,
     "source_date_epoch": os.environ.get("SOURCE_DATE_EPOCH"),
 }
-Path(snakemake.output.prov).write_text(json.dumps(prov, indent=2, sort_keys=True))
+write_json_atomic(snakemake.output.prov, prov)

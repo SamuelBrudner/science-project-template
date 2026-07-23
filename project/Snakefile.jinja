@@ -6,7 +6,8 @@
 #
 # Scientific parameters live in conf/ (Hydra) and are resolved+validated into
 # results/resolved_config.yaml, which downstream rules consume as a declared
-# input. workflow/config.yaml stays thin (paths only).
+# input. Dataset bindings live in conf/catalog.yaml; workflow/config.yaml contains
+# DAG selectors/topology only; executor resources live in workflow/profiles/.
 
 configfile: "workflow/config.yaml"
 {% if use_apptainer %}
@@ -31,7 +32,7 @@ rule all:
     input:
         "results/resolved_config.yaml",
         "reporting/_assets/theme-colors.tex",
-        "results/provenance.json",{% if include_example %}
+        _PROVENANCE_PATH,{% if include_example %}
         "results/figures/light/example_group_means.pdf",
         "results/figures/dark/example_group_means.pdf",
         "results/figures/light/qc_distribution.pdf",

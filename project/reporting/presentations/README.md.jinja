@@ -1,21 +1,27 @@
 # `reporting/presentations/` — Slide decks
 
-One folder per talk, named by **date + venue**: `YYYY-MM-venue/`
-(e.g. `2026-07-lab-meeting/`). The date is not decoration — a talk you gave is a
-historical record, so decks are dated and **not edited in place** afterward. Give
-a new talk → new folder.
+## Authority
 
-## Format
-**Beamer** (LaTeX). Beamer brings its own document class, so — unlike the paper
-and poster — the deck does **not** load `_assets/lab.cls`. What it *does* share with
-them is the **font policy** (`_assets/fonts.tex`, `\input` for the sans family) and
-the **generated theme colours** (`_assets/theme-colors-dark.tex`). See
-`example/slides.tex` and build with `make -C .. slides`. Whatever the format:
+See the root [`README.md`](../../README.md), reporting
+[`README.md`](../README.md), and [`AGENTS.md`](../AGENTS.md).
 
-- **Figures come from `../../results/figures/dark/`** (transparent background, sits
-  on any slide color). Reference them; don't paste-and-forget.
-- Record the results git SHA / {{ data_versioning }} rev the deck was built from,
-  so you can trace which figure version you presented.
+Use one artifact folder per talk, conventionally `YYYY-MM-venue/`. Mutable source
+may evolve until the talk. A delivered talk is historical: freeze the presented
+deck as `deliveries/<YYYY-MM-DD>-<milestone>/`, never edit that delivery, and use
+a new folder/delivery for the next talk.
 
-Keep old decks. They are cheap to store and priceless when someone asks "what did
-you show at that meeting?"
+Slides use dark/screen data figures from `results/figures/dark/` and authored
+schematics from `assets/figures/`. Beamer decks use their own document class;
+they may share `_assets/fonts.tex` and generated theme colors but do not load
+`_assets/lab.cls`.
+
+{% if include_example -%}
+The optional example deck is `example/slides.tex`. Build the bundled reporting
+examples with `make -C reporting slides`.
+{% else -%}
+This render contains no example deck or reporting Makefile. Create an artifact
+folder and use your chosen build command; do not rely on example paths.
+{% endif %}
+
+See [`../DELIVERIES.md`](../DELIVERIES.md) for the required immutable manifest
+and payload layout.

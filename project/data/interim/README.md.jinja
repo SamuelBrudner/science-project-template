@@ -1,0 +1,15 @@
+# `data/interim/` — Disposable pipeline scratch
+
+## Authority
+
+See the root [`README.md`](../../README.md) contract and
+[`../AGENTS.md`](../AGENTS.md).
+
+Use this directory only for declared outputs that connect stages within a DAG
+run and are not a stable interface for later analyses. Payloads are ignored,
+never committed to Git, and never snapshotted with DVC. Delete and regenerate
+them freely.
+
+If another analysis, collaborator, or future run needs the file as a named
+dataset, it belongs in `data/processed/` instead. Terminal review/report output
+belongs in `results/`.

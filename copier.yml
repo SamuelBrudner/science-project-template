@@ -11,12 +11,23 @@ _subdirectory: project          # only files under project/ are rendered
 _min_copier_version: "9.0.0"
 _jinja_extensions:              # for {% now %} in LICENSE / CITATION (pip install jinja2-time)
   - jinja2_time.TimeExtension
+_envops:
+  keep_trailing_newline: true   # generated text must pass end-of-file-fixer
 
-# Never overwrite/merge user-accumulated data on `copier update`. The run ledger
-# grows with each registered execution, so it must be preserved as-is (a later
-# schema is migrated in place by scripts/register_run.py, not by Copier).
+# Never overwrite/merge user-accumulated records or local agent policy on
+# `copier update`. The run ledger grows with each registered execution, the lab
+# notebook accumulates human interpretation, and AGENTS.local.md is deliberately
+# project-specific. Later schema changes are migrated in place by project tools,
+# not by Copier.
 _skip_if_exists:
   - "metadata/runs.csv"
+  - "reporting/writeups/LAB_NOTEBOOK.md"
+  - "AGENTS.local.md"
+  - "metadata/provenance/*.json"
+  - "lab/records/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*"
+  - "notes/decisions/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.md"
+  - "reporting/**/submissions/**"
+  - "reporting/**/deliveries/**"
 
 # Keep Copier defaults, plus drop example files when include_example is false.
 _exclude:
@@ -24,6 +35,19 @@ _exclude:
   - "~*"
   - "*.py[co]"
   - "__pycache__"
+  - "**/__pycache__"
+  - ".pytest_cache"
+  - ".pytest_cache/**"
+  - "**/.pytest_cache"
+  - "**/.pytest_cache/**"
+  - ".ruff_cache"
+  - ".ruff_cache/**"
+  - "**/.ruff_cache"
+  - "**/.ruff_cache/**"
+  - ".benchmarks"
+  - ".benchmarks/**"
+  - "**/.benchmarks"
+  - "**/.benchmarks/**"
   - ".git"
   - ".DS_Store"
   # NOTE: _exclude matches the RENDERED path, so no .jinja suffix here.
@@ -37,16 +61,22 @@ _exclude:
   - "{% if not include_example %}**/test_metadata_ids.py{% endif %}"
   - "{% if not include_example %}**/example.smk{% endif %}"
   - "{% if not include_example %}**/test_example.py{% endif %}"
-  - "{% if not include_example %}tests/fixtures/raw/*{% endif %}"
+  - "{% if not include_example %}metadata/samples.example.csv{% endif %}"
+  - "{% if not include_example %}tests/fixtures/raw{% endif %}"
+  - "{% if not include_example %}tests/fixtures/raw/**{% endif %}"
   - "{% if not include_example %}**/validate_metadata.py{% endif %}"
   - "{% if not include_example %}**/qc_sample.py{% endif %}"
   - "{% if not include_example %}**/aggregate.py{% endif %}"
   # provenance.py + provenance.smk are ALWAYS shipped (run identity is not part of
   # the deletable example); they degrade to hashing config+code+env when example off.
-  - "{% if not include_example %}reporting/papers/example/*{% endif %}"
-  - "{% if not include_example %}reporting/presentations/example/*{% endif %}"
+  - "{% if not include_example %}reporting/papers/example{% endif %}"
+  - "{% if not include_example %}reporting/papers/example/**{% endif %}"
+  - "{% if not include_example %}reporting/presentations/example{% endif %}"
+  - "{% if not include_example %}reporting/presentations/example/**{% endif %}"
   - "{% if not include_example %}reporting/Makefile{% endif %}"
+  - "{% if not use_apptainer %}containers{% endif %}"
   - "{% if not use_apptainer %}containers/apptainer.def{% endif %}"
+  - "{% if compute_backend != 'slurm' %}workflow/profiles/slurm{% endif %}"
   - "{% if compute_backend != 'slurm' %}workflow/profiles/slurm/config.yaml{% endif %}"
   - "{% if docs_backend != 'sphinx' %}docs/conf.py{% endif %}"
   - "{% if docs_backend != 'sphinx' %}docs/index.rst{% endif %}"
@@ -56,6 +86,8 @@ _exclude:
   - "{% if docs_backend != 'mkdocs' %}docs/tutorial.ipynb{% endif %}"
   - "{% if notebook_tool != 'marimo' %}exploratory/example_marimo.py{% endif %}"
   - "{% if notebook_tool != 'jupyter' %}exploratory/example.ipynb{% endif %}"
+  - "{% if bench_record_authority != 'repository' %}lab/records{% endif %}"
+  - "{% if bench_record_authority != 'repository' %}lab/records/**{% endif %}"
 # Default _templates_suffix is ".jinja": ONLY *.jinja files are rendered; every
 # other file (incl. raw LaTeX with braces) is copied verbatim. So default Jinja
 # {{ }} delimiters are safe here.
@@ -70,7 +102,11 @@ _message_after_copy: |
     pip install -e ".[dev]"
     pre-commit install && pre-commit install --hook-type commit-msg
 
+  {% if include_example %}
   Reproduce the example:  snakemake --cores 1
+  {% else %}
+  Build the starter pipeline:  snakemake --cores 1
+  {% endif %}
 
   For a byte-reproducible release/container, additionally commit a lock:
     conda-lock lock --file environment.yml -p linux-64 -p osx-arm64   # -> conda-lock.yml
@@ -283,6 +319,28 @@ notebook_tool:
     None: "none"
   default: "marimo"
 
+bench_record_authority:
+  type: str
+  help: "System of record for executed bench facts"
+  choices:
+    Electronic lab notebook (recommended): "eln"
+    This repository (lab/records/): "repository"
+  default: "eln"
+
+bench_record_location:
+  type: str
+  help: "ELN notebook/workspace URL or stable identifier (blank to link later)"
+  default: ""
+  when: "{{ bench_record_authority == 'eln' }}"
+  validator: >-
+    {% if bench_record_location != bench_record_location.strip() %}
+    bench_record_location cannot have leading or trailing whitespace
+    {% elif bench_record_location and not bench_record_location.isprintable() %}
+    bench_record_location must be printable (no newlines/tabs/control characters)
+    {% elif '`' in bench_record_location %}
+    bench_record_location cannot contain backticks (it is rendered inside Markdown code spans)
+    {% endif %}
+
 use_lab_tracker:
   type: bool
   help: "Include Lab Tracker agent guidance (system of record for research reasoning)?"
@@ -293,6 +351,16 @@ lab_tracker_project_id:
   help: "Lab Tracker project id to link this repo to (blank to set later)"
   default: ""
   when: "{{ use_lab_tracker }}"
+  validator: >-
+    {% set compact_tracker_id = lab_tracker_project_id
+      | replace('-', '') | replace('_', '') | replace('.', '') | replace(':', '') %}
+    {% if lab_tracker_project_id != lab_tracker_project_id.strip() %}
+    lab_tracker_project_id cannot have leading or trailing whitespace
+    {% elif lab_tracker_project_id and not lab_tracker_project_id.isprintable() %}
+    lab_tracker_project_id must be printable (no newlines/tabs/control characters)
+    {% elif lab_tracker_project_id and not compact_tracker_id.isalnum() %}
+    lab_tracker_project_id may contain only letters, numbers, '.', '_', ':', and '-'
+    {% endif %}
 
 # ---------------------------------------------------------------------------
 # Example content

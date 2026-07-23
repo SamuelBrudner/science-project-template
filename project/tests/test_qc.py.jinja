@@ -5,6 +5,7 @@ Delete with the example stage.
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from {{ package_name }}.qc import summarize_sample, underpowered_conditions
 
@@ -26,6 +27,38 @@ def test_summarize_sample_missing_fails() -> None:
     assert m["n"] == 2
     assert m["n_missing"] == 1
     assert m["qc_pass"] is False
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ([], {"n": 0, "n_missing": 0, "mean": None, "sd": None}),
+        ([5.0], {"n": 1, "n_missing": 0, "mean": 5.0, "sd": None}),
+        ([np.nan], {"n": 0, "n_missing": 1, "mean": None, "sd": None}),
+        (
+            [np.inf, -np.inf, 2.0],
+            {"n": 1, "n_missing": 2, "mean": 2.0, "sd": None},
+        ),
+    ],
+)
+def test_qc_nonfinite_edge_cases_round_trip_as_strict_json(
+    values: list[float], expected: dict[str, float | int | None]
+) -> None:
+    """Empty/invalid statistics use null and revalidate byte semantics."""
+    from metadata.schemas import SampleQC
+
+    metrics = summarize_sample(pd.Series(values, dtype=float), min_n=1)
+    for key, value in expected.items():
+        assert metrics[key] == value
+    record = SampleQC(sample_id="s1", condition="control", **metrics)
+    encoded = record.model_dump_json()
+    assert "NaN" not in encoded and "Infinity" not in encoded
+    assert SampleQC.model_validate_json(encoded) == record
+
+
+def test_qc_rejects_nonnumeric_measurements() -> None:
+    with pytest.raises(ValueError):
+        summarize_sample(pd.Series(["not-a-number"]), min_n=1)
 
 
 def test_underpowered_all_pass() -> None:

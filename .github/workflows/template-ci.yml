@@ -47,8 +47,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install \
+            "setuptools>=68" wheel \
             "copier>=9" jinja2-time \
             "snakemake>=8" snakemake-executor-plugin-slurm \
+            "dvc>=3,<4" \
             pre-commit cffconvert \
             sphinx myst-nb furo numpydoc \
             mkdocs-material mkdocs-jupyter \

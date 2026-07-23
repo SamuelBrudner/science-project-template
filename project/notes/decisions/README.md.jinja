@@ -1,0 +1,24 @@
+# `notes/decisions/` — Human-accepted decision records
+
+{% if use_lab_tracker -%}
+Lab Tracker is enabled, so accepted research decisions belong in its linked
+project. This directory is not a parallel authority. Preserve pre-existing
+decision files from older/offline workflows, but do not add a new accepted
+research decision here merely because Lab Tracker is inconvenient or
+temporarily unavailable.
+{% else -%}
+Lab Tracker is disabled. Record each consequential, human-accepted research
+decision as `YYYY-MM-DD-short-slug.md` with:
+
+- date and decision;
+- question/context and alternatives considered;
+- rationale and evidence pointers;
+- consequences, owner, and revisit condition; and
+- related code/config/data/reporting paths.
+
+Agents may draft the record after the user decides; they may not decide or mark
+acceptance on the user's behalf. Operational truth still belongs in code,
+configuration, metadata, or reporting.
+{% endif %}
+
+The root [`README.md`](../../README.md) contract remains authoritative.

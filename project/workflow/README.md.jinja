@@ -1,32 +1,50 @@
-# `workflow/` — The pipeline
+# `workflow/` — Declarative pipeline
 
-The declarative DAG that turns `data/raw/` into `results/`. Describes **what to
-build**, not how — the "how" is imported from `src/`.
+## Authority
+
+The root [`README.md`](../README.md) contract defines canonical input and output
+homes. Local [`AGENTS.md`](AGENTS.md) defines execution constraints.
 
 ```
 workflow/
-├── rules/       # Snakemake rules (or DVC stage defs) — the DAG
-├── scripts/     # THIN entrypoints: parse Hydra config, call src/ functions, write output
-└── profiles/    # execution: local/ (workstation) and slurm/ (cluster)
+├── config.yaml   # DAG selectors/topology only
+├── rules/        # Snakemake DAG declarations
+├── scripts/      # thin Snakemake adapters
+└── profiles/     # executor/scheduler/container/resource policy
 ```
 
-## The one rule: no business logic here
-Entrypoints in `scripts/` should only wire things together — read a config from
-`conf/`, call a tested function from `src/`, write a file. If you're writing an
-algorithm here, it belongs in `src/` (where it gets typed and unit-tested).
+`conf/config.yaml` owns scientific parameters. `conf/catalog.yaml` owns logical
+dataset-to-path bindings. `workflow/config.yaml` may select a catalog key and
+enable DAG branches, but must not duplicate dataset paths, scientific values, or
+executor resource settings.
 
 ## Adding a stage
-1. Write/extend a tested function in `src/`.
-2. Add a thin entrypoint in `scripts/` that calls it with Hydra config.
-3. Declare inputs/outputs as a rule in `rules/`.
-4. Run `snakemake --list` to confirm the target appears.
 
-## Running
+1. Implement and test reusable behavior in `src/`.
+2. Add a thin `workflow/scripts/` adapter that consumes declared Snakemake
+   inputs/configuration, calls `src/`, and writes only declared outputs.
+3. Add a rule with complete inputs, outputs, parameters, logs, and environment.
+4. Classify each output using the root contract: disposable scratch in
+   `data/interim/`, reusable data in `data/processed/`, terminal QC/figures/tables
+   in `results/`.
+5. Dry-run and build the named target; verify provenance and failure behavior.
+
 ```bash
-snakemake --cores 1{% if compute_backend == "slurm" %}
-snakemake --profile workflow/profiles/slurm{% endif %}
+snakemake -n <target>
+snakemake --cores 1 <target>
+snakemake --list
 ```
-{%- if compute_backend == "slurm" %}
+{% if compute_backend == "slurm" %}
+On HPC, use `snakemake --profile workflow/profiles/slurm`; do not run analysis
+Python directly on a login node.
+{% endif -%}
 
-Never run plain Python on an HPC login node — go through the SLURM profile{% if use_apptainer %}, inside the container{% endif %}.
-{%- endif %}
+
+{% if include_example %}The bundled example demonstrates manifest validation,
+per-sample and cohort QC, reusable processed data, light/dark figures, and
+current-run provenance. Its synthetic raw inputs remain test fixtures.
+{% else %}No example workflow stage, fixture data, or generated example artifact
+exists in this render. Start with a project catalog entry, tested library
+function, thin adapter, and declared rule; do not follow paths or commands for
+the optional example.
+{% endif -%}

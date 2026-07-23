@@ -43,9 +43,15 @@ jobs:
         if: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
         run: cz check --rev-range {% raw %}origin/${{ github.base_ref }}..HEAD{% endraw %}
 
-      - name: Validate metadata + funding schemas
+      - name: Validate funding schema
         run: |
-          python -c "import pandas as pd, yaml; from metadata.schemas import SampleRecord, Funding; [SampleRecord(**r) for r in pd.read_csv('metadata/samples.example.csv').to_dict('records')]; Funding(**yaml.safe_load(open('funding.yaml')))"
+          python -c "import yaml; from metadata.schemas import Funding; Funding(**yaml.safe_load(open('funding.yaml')))"
+{%- if include_example %}
+
+      - name: Validate example sample manifest
+        run: |
+          python -c "import pandas as pd; from metadata.schemas import SampleRecord; [SampleRecord(**r) for r in pd.read_csv('metadata/samples.example.csv').to_dict('records')]"
+{%- endif %}
 
       - name: Tests
         run: pytest
@@ -64,11 +70,12 @@ jobs:
             results/figures/dark/example_group_means.png \
             results/figures/light/qc_distribution.pdf \
             results/provenance.json \
+            data/processed/measurements.parquet \
             results/qc/qc_summary.csv \
-            results/excluded_samples.json; do
+            results/qc/excluded_samples.json; do
             test -f "$f" || { echo "::error::missing artifact $f"; exit 1; }
           done
           # The example cohort intentionally includes QC-failing samples, so the
           # exclusion path is exercised (non-empty excluded list).
-          python -c "import json; ex=json.load(open('results/excluded_samples.json')); assert ex, 'expected excluded samples'; print('excluded:', ex)"
+          python -c "import json; ex=json.load(open('results/qc/excluded_samples.json')); assert ex, 'expected excluded samples'; print('excluded:', ex)"
 {%- endif %}

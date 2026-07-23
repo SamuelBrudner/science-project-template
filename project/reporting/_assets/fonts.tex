@@ -1,7 +1,8 @@
 % Shared font policy — single source for BOTH lab.cls (papers/posters) and the
 % Beamer deck. Both \input this via TEXINPUTS=reporting/_assets: (the Makefile).
 %
-% SUPPORTED REPERTOIRE: Latin + CJK (Noto Serif/Sans CJK) under XeLaTeX/LuaLaTeX;
+% SUPPORTED REPERTOIRE: Latin + CJK (Noto CJK, with TeX Live's Fandol fallback)
+% under XeLaTeX/LuaLaTeX;
 % Latin-only under pdfLaTeX. To add another script (Arabic, Devanagari, Hebrew,
 % ...), install its Noto font and set it below. A missing glyph FAILS the build
 % (reporting/Makefile), so unsupported scripts are never silently dropped. Beamer
@@ -11,6 +12,12 @@
   \RequirePackage[T1]{fontenc}
 \else
   \RequirePackage{fontspec}
-  \IfFontExistsTF{Noto Serif CJK SC}{\setmainfont{Noto Serif CJK SC}}{}
-  \IfFontExistsTF{Noto Sans CJK SC}{\setsansfont{Noto Sans CJK SC}}{}
+  \IfFontExistsTF{Noto Serif CJK SC}
+    {\setmainfont{Noto Serif CJK SC}}
+    {\IfFontExistsTF{FandolSong-Regular.otf}
+      {\setmainfont{FandolSong-Regular.otf}}{}}
+  \IfFontExistsTF{Noto Sans CJK SC}
+    {\setsansfont{Noto Sans CJK SC}}
+    {\IfFontExistsTF{FandolHei-Regular.otf}
+      {\setsansfont{FandolHei-Regular.otf}}{}}
 \fi

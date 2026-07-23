@@ -8,6 +8,11 @@
 # manifest can never silently retain a stale hash / run_id.
 from pathlib import Path as _Path
 
+from {{ package_name }}.catalog import dataset_path as _catalog_dataset_path
+from {{ package_name }}.catalog import load_catalog as _load_catalog
+from metadata.path_safety import ensure_real_directory as _ensure_real_directory
+from metadata.path_safety import require_regular_file as _require_regular_file
+
 # The code-file enumeration (_provenance_code_files) is defined in config.smk
 # (included first) so the provenance code INPUTS and the code_fp rebuild trigger
 # use exactly the same file set. Editing any of these files re-runs provenance
@@ -40,6 +45,20 @@ def _provenance_env_files():
 
 _PROVENANCE_CODE = _provenance_code_files()
 _PROVENANCE_ENV = _provenance_env_files()
+_PROVENANCE_CATALOG = "conf/catalog.yaml"
+_PROVENANCE_ROOT = _Path.cwd()
+_require_regular_file(
+    _PROVENANCE_ROOT, _Path(_PROVENANCE_CATALOG), label="data catalog"
+)
+_PROVENANCE_CATALOG_MODEL = _load_catalog(_PROVENANCE_CATALOG)
+_PROVENANCE_PATH = str(
+    _catalog_dataset_path("provenance", _PROVENANCE_CATALOG_MODEL)
+)
+_ensure_real_directory(
+    _PROVENANCE_ROOT,
+    _Path(_PROVENANCE_PATH).parent,
+    label="current provenance output parent",
+)
 # _REALIZED_FP is defined in config.smk (included first) and shared here so the
 # provenance rule refreshes on a runtime change even when built on its own.
 
@@ -47,17 +66,21 @@ _PROVENANCE_ENV = _provenance_env_files()
 rule provenance:
     input:
         config="results/resolved_config.yaml",
+        # The root repository contract promises that catalog bindings are
+        # provenance-hashed even when the optional example is absent.
+        catalog=_PROVENANCE_CATALOG,
         code=_PROVENANCE_CODE,
         env=_PROVENANCE_ENV,
 {%- if include_example %}
         # sources
         manifest=_MANIFEST_PATH,
         raw=[RAW[s] for s in SAMPLES],
+        raw_dvc=DVC_METADATA,
         qc=expand("results/qc/{s}.json", s=SAMPLES),
         # derived
-        table="results/tables/measurements.parquet",
-        qc_summary="results/qc/qc_summary.csv",
-        excluded="results/excluded_samples.json",
+        table=_MEASUREMENTS_PATH,
+        qc_summary=_QC_SUMMARY_PATH,
+        excluded="results/qc/excluded_samples.json",
         figures=[
             "results/figures/light/example_group_means.pdf",
             "results/figures/light/example_group_means.png",
@@ -74,6 +97,6 @@ rule provenance:
         # (Snakemake's `params` rerun-trigger), even if no tracked file changed.
         realized_fp=_REALIZED_FP,
     output:
-        prov="results/provenance.json",
+        prov=_PROVENANCE_PATH,
     script:
         "../scripts/provenance.py"

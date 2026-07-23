@@ -1,0 +1,15 @@
+# AGENTS.md — `conf/`
+
+Root [`../AGENTS.md`](../AGENTS.md) applies. Use the ownership table in
+[`README.md`](README.md); do not create a second authority for a value.
+
+- Scientific parameter changes can change artifact identity and conclusions.
+  Make them explicit, reviewable, and provenance-hashed; never tune a threshold
+  silently to obtain a preferred result.
+- Dataset bindings belong only in `catalog.yaml`. A workflow selects a logical
+  key rather than repeating its path.
+- Theme source belongs in `theme/`; never edit generated theme files.
+- Credentials and workstation-specific secrets come from environment variables
+  or ignored local files.
+- Validate configuration and fail on unknown, missing, or inconsistent values.
+  Do not add fallback defaults that conceal a malformed project configuration.

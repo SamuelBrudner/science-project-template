@@ -1,0 +1,182 @@
+# Repository structure — design rationale
+
+This page explains **why** {{ project_name }} is organized this way. It is not a
+second path inventory. The marked Repository contract in the root
+[`README.md`](../README.md) is the sole placement authority; when this rationale
+and that contract differ, the root contract wins.
+
+## 1. Separate concerns by rate of change
+
+Scientific repositories combine reusable algorithms, orchestration, large data,
+and human communication. They age differently, so this template separates them:
+
+- reusable library behavior changes deliberately and is typed/tested;
+- pipeline wiring changes as analyses evolve and declares every dependency;
+- data moves from immutable acquisition through disposable or reusable derived
+  forms; and
+- reporting source evolves under human review, while delivered versions freeze.
+
+The point is not aesthetic symmetry. It lets a future reader tell whether a file
+is source, evidence, cache, generated output, or a historical fact without
+reverse-engineering how it was made.
+
+## 2. One placement contract, many local explanations
+
+The root README contains one marked, machine-checkable matrix for canonical
+homes, storage, ownership, and lifecycle. Local READMEs may explain a directory's
+practice, but do not redefine the matrix. Local `AGENTS.md` files add permissions
+and safety constraints; parent rules continue to apply.
+
+This asymmetry prevents two common failure modes: several partial directory
+trees drifting apart, and an agent treating the nearest instruction file as
+permission to ignore a repository-wide invariant. Placement is tested as part of
+correctness because a scientifically correct file in the wrong lifecycle can be
+lost, accidentally committed, or mistaken for evidence.
+
+## 3. Data state follows reuse and irreversibility
+
+Raw data is the only irreplaceable computational input and therefore stays
+byte-immutable. Synthetic test fixtures are code fixtures, not pretend
+acquisitions. Derived state is split by its downstream role:
+
+- interim data is disposable glue within a pipeline;
+- processed data is a reusable analysis interface; and
+- results are terminal review or communication artifacts.
+
+File extension does not decide the state. A Parquet dataset reused by another
+analysis is processed data; a CSV summary used only in a report is a result.
+Real raw payloads use {{ data_versioning }}. Processed payloads use it only when
+their exact bytes must be shared or retained; generated results remain ignored.
+
+## 4. Human records have distinct authorities
+
+Bench execution, computational execution, research reasoning, and reporting are
+different records and should not compete for authority.
+
+{% if bench_record_authority == "eln" -%}
+The ELN owns executed bench facts{% if bench_record_location %} at
+`{{ bench_record_location }}`{% else %}; its location is intentionally marked
+unconfigured until a person supplies it{% endif %}. The repository keeps reusable
+protocols and stable pointers.
+{% else -%}
+This project deliberately uses human-created repository bench records under
+`lab/records/`; agents cannot create or complete those physical-world facts.
+{% endif %}
+
+{% if use_lab_tracker -%}
+Lab Tracker owns accepted questions, claims, decisions, dead ends, and pivots
+{% if lab_tracker_project_id %}for project `{{ lab_tracker_project_id }}`{% else %}
+after a person configures the project link{% endif %}. It stores semantic context
+and artifact pointers, not raw/full figure bytes, ELN entries, task status, or
+the run ledger.
+{% else -%}
+With Lab Tracker disabled, dated `notes/decisions/` files preserve
+human-accepted research decisions. Ordinary notes remain scratch.
+{% endif %}
+
+Mutable reporting sources assemble evidence for an audience. A delivery freezes
+exact payload bytes, figures, identifiers, and checksums only when a person
+approves sending/presenting them.
+
+## 5. Agents operate under inherited, artifact-based completion
+
+The root `AGENTS.md` owns permissions. Nested files add local constraints and
+cannot relax raw immutability, non-fabrication, human-gated durable mutations,
+or the placement completion gate. `AGENTS.local.md` survives Copier updates so a
+project can add stricter local rules without forking the template contract.
+
+For scientific pipeline work, completion is demonstrated by inspectable
+artifacts: validated inputs/schema/unit of analysis, deterministic exemplars,
+per-unit and cohort QC, machine-readable metrics, explicit provenance,
+reproducible commands, invariant tests, and an end-to-end smoke run. Pure
+numerical kernels target at least 90% coverage; the repository-wide gate may be
+lower because adapters and generated surfaces have different testing shapes.
+
+## 6. Theme is source configuration, not copied styling
+
+Colors, typography, and figure dimensions are declared once in `conf/theme/`.
+Library functions validate/interpret the theme; a pipeline stage renders
+consumer-specific Matplotlib and TeX artifacts. Generated theme files are never
+edited by hand.
+
+This preserves consistent light/print and dark/screen variants without keeping
+two manually divergent plot implementations. Accessibility and physical figure
+dimensions are scientific communication parameters and therefore reviewed as
+configuration.
+
+## 7. One declarative DAG owns computation
+
+Snakemake declares causality from catalogued inputs and configuration to
+processed data, QC, figures, tables, logs, and current provenance. Rules state
+all dependencies; thin adapters translate Snakemake objects into calls to tested
+library behavior. Hidden writes and notebook dependencies would make staleness
+undetectable, so they are prohibited.
+
+Configuration is split by ownership rather than convenience:
+
+- `conf/config.yaml` owns scientific choices;
+- `conf/catalog.yaml` owns logical dataset bindings;
+- `workflow/config.yaml` owns topology/selectors; and
+- workflow profiles own executor/scheduler resources.
+
+A value should appear in only one of those authorities.
+
+## 8. Figures are either regenerable outputs or authored inputs
+
+A data-derived plot is a build target. Review changes are implemented in code or
+configuration and rerun. A schematic that a person must redraw is an authored
+input with editable source and source metadata. Small authored assets fit in
+Git; larger or frequently changing binaries use {{ data_versioning }} at the
+same logical path.
+
+A composite assembled in code remains regenerable even if it reads an authored
+panel. A hand-assembled composite is deliberately non-regenerable and therefore
+becomes an authored asset. Exact copies enter versioned history only when a
+reporting delivery is frozen.
+
+## 9. Environments and secrets are explicit
+
+The project environment is local to the repository, dependencies are declared
+and lockable, and HPC execution is routed through a profile{% if use_apptainer %}
+with optional Apptainer isolation{% endif %}. Runtime secrets come from
+environment variables or an ignored `.env`; configuration and documentation
+contain names and examples, never credentials.
+
+Environment identity in provenance must describe the realized runtime rather
+than pretend a lock or container was used when it was not. Git and DVC identities
+are retrieved from their tools, including dirty state.
+
+## 10. Metadata and provenance separate current from durable truth
+
+Validated manifests connect stable scientific identifiers to raw files. They are
+small Git-tracked facts, while payload bytes remain in the data layer. Invalid or
+unregistered inputs fail loudly instead of becoming implicit sample discovery.
+
+The pipeline writes a complete current-run manifest to
+`results/provenance.json`. Human-approved registration serializes writers,
+publishes the complete immutable archive under
+`metadata/provenance/<execution_id>.json` first, and then atomically rewrites the
+execution index. This is not a two-file atomic transaction: an idempotent retry
+completes an archive-only state after an interrupted ledger write. A human
+interpretation entry then references that registered execution. Keeping
+generation, registration, and interpretation separate prevents a routine
+pipeline run from silently becoming a permanent scientific claim.
+
+## 11. Rendered profile and supported surface
+
+This project was rendered with:
+
+- compute backend: `{{ compute_backend }}`{% if use_apptainer %}, with an
+  Apptainer definition{% endif %};
+- documentation backend: `{{ docs_backend }}`;
+- exploration tool: `{{ notebook_tool }}`;
+- data versioning: `{{ data_versioning }}`;
+- Lab Tracker guidance: {% if use_lab_tracker %}enabled{% else %}disabled{% endif %};
+- bench-record authority: `{{ bench_record_authority }}`; and
+- bundled synthetic example: {% if include_example %}included{% else %}omitted{% endif %}.
+
+The supported surface is what the rendered repository, its READMEs, tests, and
+commands actually provide. DataLad, Git LFS, alternate schedulers, automatic
+scientific record acceptance, and undocumented reporting backends are not
+implied features. Add a capability only with implementation, documentation,
+conditional rendering, migration behavior, and validation together.

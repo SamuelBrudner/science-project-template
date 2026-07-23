@@ -2,22 +2,27 @@
 # {{ package_name }}.catalog). Load by name instead of hard-coding paths:
 #
 #     from {{ package_name }}.catalog import load_dataset
+{%- if include_example %}
 #     manifest = load_dataset("sample_manifest")
+{%- else %}
+#     provenance = load_dataset("provenance")
+{%- endif %}
 #
-# Snakemake rules keep declaring explicit inputs/outputs (that's what makes the
-# DAG correct); this catalog is for ad-hoc / notebook / library access.
+# Snakemake resolves named bindings here and still declares the resulting paths
+# explicitly (that's what keeps the DAG correct). Notebooks and library code use
+# the same names instead of creating a second path authority.
 datasets:
+{%- if include_example %}
   sample_manifest:
     path: metadata/samples.example.csv
     format: csv
-{%- if include_example %}
   measurements:
-    path: results/tables/measurements.parquet
+    path: data/processed/measurements.parquet
     format: parquet
   qc_summary:
     path: results/qc/qc_summary.csv
     format: csv
+{%- endif %}
   provenance:
     path: results/provenance.json
     format: json
-{%- endif %}

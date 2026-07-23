@@ -1,16 +1,12 @@
-# Thin Snakemake config: paths, sample source, wildcards, resource hints.
-# Scientific parameters live in conf/ (Hydra), NOT here.
+# Thin Snakemake config: DAG selectors/topology only.
+#
+# Dataset locations and formats live in conf/catalog.yaml. Scientific parameters
+# live in conf/config.yaml. Executor resources live in workflow/profiles/.
 
-sample_manifest: "metadata/samples.example.csv"
-
-paths:
-  raw: "data/raw"
-  interim: "data/interim"
-  processed: "data/processed"
-  figures_light: "results/figures/light"
-  figures_dark: "results/figures/dark"
-
-# Default per-rule resources (overridden by the slurm profile).
-resources:
-  mem_mb: 2000
-  runtime: 30
+{%- if include_example %}
+# Select the logical catalog entry used as the sample manifest. Override the key,
+# not a filesystem path: snakemake --config sample_manifest_dataset=my_manifest
+sample_manifest_dataset: "sample_manifest"
+{%- else %}
+{}
+{%- endif %}

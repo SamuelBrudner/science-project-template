@@ -1,0 +1,16 @@
+# `src/` — Reusable project library
+
+## Authority
+
+The root [`README.md`](../README.md) contract defines this layer. Package-specific
+agent constraints are in [`AGENTS.md`](AGENTS.md).
+
+Use `src/{{ package_name }}/` for reusable, typed, tested behavior. Analysis
+kernels transform in-memory values and remain pure. Explicit boundary adapters
+such as `catalog.py` and `settings.py` may perform bounded reads when called; they
+must not perform import-time I/O, orchestrate analysis stages, choose undeclared
+output locations, or hide writes.
+
+Snakemake DAG wiring and file-writing adapters belong in `workflow/`. Deliberate
+operator CLIs belong in top-level `scripts/`. Disposable trials belong in
+`exploratory/` until promoted into tested library code.

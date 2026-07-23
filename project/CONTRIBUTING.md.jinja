@@ -1,28 +1,50 @@
 # Contributing to {{ project_name }}
 
 ## Setup
+
 ```bash
-# A fresh clone has environment.yml but no lock yet:
 conda env create -f environment.yml -p ./conda_env
-# Once a conda-lock.yml has been generated & committed, prefer the exact lock:
-#   conda-lock install --prefix ./conda_env conda-lock.yml
 conda activate ./conda_env
 pip install -e ".[dev]"
 pre-commit install && pre-commit install --hook-type commit-msg
 ```
 
+If a committed `conda-lock.yml` exists, prefer
+`conda-lock install --prefix ./conda_env conda-lock.yml`.
+
 ## Workflow
-- **Branch, don't push to `main`.** `git checkout -b <type>/<short-desc>`.
-- **Conventional Commits** (enforced by commitizen): `feat:`, `fix:`, `docs:`,
-  `refactor:`, `test:`, `chore:`. Releases + changelog are automated via `cz bump`.
-- **TDD** for library code in `src/`: write the failing test first.
-- Open a PR; CI must be green (pre-commit, tests, pipeline reproduce) to merge.
 
-## The checklist (PR template covers this)
-- [ ] `pre-commit run --all-files` passes
-- [ ] Tests added/updated; `pytest` green
-- [ ] New public functions have type hints + numpydoc docstrings
-- [ ] No secrets committed; no edits to `data/raw/` or `results/`
-- [ ] Docs updated if behavior changed
+- Read the marked Repository contract in [`README.md`](README.md) before adding
+  an artifact. It is the sole placement authority.
+- Read root [`AGENTS.md`](AGENTS.md), any nested agent instructions, and
+  project-local additions before editing.
+- Work on a topic branch and merge through a reviewed PR. Use Conventional
+  Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
+- Use test-driven changes for reusable library behavior. Do not weaken a gate or
+  silently correct/drop data to make a run pass.
+- Keep scientific choices, dataset bindings, topology, and executor resources
+  in their distinct canonical configuration surfaces.
 
-See `docs/structure.md` for the repo layout and the rules behind it.
+## Completion checklist
+
+- [ ] Every created, moved, or generated file is in its canonical home with the
+      required Git/DVC/ignore policy; accidental duplicates and temporary files
+      are gone.
+- [ ] `data/raw/` is byte-unchanged and no real/synthetic data crossed the
+      raw/fixture boundary.
+- [ ] Reusable computation has tests, types, and documentation; pipeline I/O is
+      fully declared.
+- [ ] Scientific pipeline changes include validated inputs/schema/unit of
+      analysis, deterministic exemplars, per-unit and cohort QC, machine-readable
+      metrics, provenance, and a reproducible command.
+- [ ] `pytest -q` and `pre-commit run --all-files` pass, plus relevant Snakemake
+      dry-run/end-to-end targets.
+- [ ] No secret, cache, notebook output, generated result, or large payload is
+      staged incorrectly.
+- [ ] Documentation and migration notes reflect changed behavior or paths.
+- [ ] Human-gated actions—factual metadata, raw/DVC mutation, run registration,
+      interpretation, delivery freeze, research decision, or external record
+      mutation—were either explicitly approved or clearly handed off as undone.
+
+The rationale behind the contract is in
+[`docs/structure.md`](docs/structure.md); it does not supersede the root matrix.
