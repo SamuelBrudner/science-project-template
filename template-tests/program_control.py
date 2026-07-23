@@ -219,6 +219,7 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
             and not unexpected_metadata
             and "<!-- BEGIN REPOSITORY CONTRACT -->" in contract
             and "<!-- END REPOSITORY CONTRACT -->" in contract
+            and ".beads/last-touched" in (destination / ".gitignore").read_text()
             and answers.get("project_profile") == "program_control"
             and answers.get("registry_prefix") == "vdp"
         )
@@ -259,8 +260,25 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
             init_code, init_output = _run(
                 ["bd", "--no-db", "init", "-p", "vdp"], destination, env
             )
+            create_code, create_output = _run(
+                [
+                    "bd",
+                    "--no-db",
+                    "--no-daemon",
+                    "create",
+                    "--id",
+                    "vdp-governance",
+                    "--type",
+                    "epic",
+                    "--title",
+                    "Governance",
+                ],
+                destination,
+                env,
+            )
         else:
             init_code, init_output = 0, "bd unavailable; canonical support fixture used"
+            create_code, create_output = 0, ""
             (destination / ".beads/config.yaml").write_text(
                 'issue-prefix: "vdp"\nno-db: true\n'
             )
@@ -269,14 +287,15 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
             )
             (destination / ".beads/README.md").write_text("# Beads\n")
             (destination / ".beads/interactions.jsonl").write_text("")
+            (destination / ".beads/last-touched").write_text("vdp-governance\n")
         support_code, support_output = _run(
             [sys.executable, "scripts/validate_registry.py"], destination, env
         )
         results.append(
             _result(
                 "program_beads_no_db_support",
-                init_code == 0 and support_code == 0,
-                init_output + support_output,
+                init_code == 0 and create_code == 0 and support_code == 0,
+                init_output + create_output + support_output,
             )
         )
 

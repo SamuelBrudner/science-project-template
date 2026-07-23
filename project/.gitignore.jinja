@@ -19,12 +19,17 @@ venv/
 # Documentation build
 site/
 
+# Beads writes this local cursor after JSONL-only mutations. It is transient
+# operator state and must never enter the control repository.
+.beads/last-touched
+
 # OS/editor state
 .DS_Store
 *~
 
-# Deliberately do not ignore Beads databases, daemon state, sockets, or local
-# path files: scripts/validate_registry.py must see and reject them.
+# Deliberately do not ignore Beads databases, daemon state, sockets, locks,
+# logs, or local path files: scripts/validate_registry.py must see and reject
+# them.
 {% else -%}
 # --- Secrets (never commit) ---
 .env

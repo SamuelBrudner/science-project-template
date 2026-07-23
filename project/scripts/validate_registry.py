@@ -38,6 +38,7 @@ BEADS_ALLOWED_FILES = {
     "issues.jsonl",
     "metadata.json",
 }
+BEADS_TRANSIENT_FILES = {"last-touched"}
 
 CATEGORY_TYPES = {
     "contracts": "contract",
@@ -247,7 +248,8 @@ def _validate_beads(
     extras = [
         path.relative_to(ROOT).as_posix()
         for path in bead_files
-        if path.relative_to(beads_dir).as_posix() not in BEADS_ALLOWED_FILES
+        if path.relative_to(beads_dir).as_posix()
+        not in BEADS_ALLOWED_FILES | BEADS_TRANSIENT_FILES
     ]
     if extras:
         errors.append(
@@ -265,6 +267,18 @@ def _validate_beads(
         if path.is_symlink():
             errors.append(
                 f"{path.relative_to(ROOT)}: Beads control files cannot be symlinks"
+            )
+    for name in BEADS_TRANSIENT_FILES:
+        transient_path = beads_dir / name
+        if not transient_path.exists():
+            continue
+        code, _output = _run_git(
+            "ls-files", "--error-unmatch", transient_path.relative_to(ROOT).as_posix()
+        )
+        if code == 0:
+            errors.append(
+                f"{transient_path.relative_to(ROOT)}: transient Beads state "
+                "must remain untracked"
             )
 
     support_present = any(
