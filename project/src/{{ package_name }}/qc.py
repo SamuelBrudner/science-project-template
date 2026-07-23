@@ -19,6 +19,17 @@ def finite_measurements(values: pd.Series) -> pd.Series:
     return pd.Series(array[np.isfinite(array)], dtype=float)
 
 
+def normalize_qc_metric_columns(qc: pd.DataFrame) -> pd.DataFrame:
+    """Parse QC CSV metrics while preserving nullable mean/SD as numeric NaN."""
+    normalized = qc.copy()
+    for column in ("n", "n_missing"):
+        normalized[column] = pd.to_numeric(normalized[column], errors="raise")
+    for column in ("mean", "sd"):
+        nullable = normalized[column].replace("", np.nan)
+        normalized[column] = pd.to_numeric(nullable, errors="raise")
+    return normalized
+
+
 def summarize_sample(
     values: pd.Series, min_n: int
 ) -> dict[str, float | int | bool | None]:

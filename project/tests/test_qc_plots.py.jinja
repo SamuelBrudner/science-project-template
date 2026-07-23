@@ -6,8 +6,10 @@ Delete with the example stage.
 import matplotlib
 
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from {{ package_name }}.qc import normalize_qc_metric_columns  # noqa: E402
 from {{ package_name }}.qc_plots import cohort_qc_figure, select_exemplars  # noqa: E402
 
 QC = pd.DataFrame(
@@ -43,6 +45,20 @@ def test_pass_and_fail_markers_are_distinct() -> None:
     faces = fig.axes[0].collections[0].get_facecolors()
     alphas = {round(float(rgba[3]), 2) for rgba in faces}
     assert len(alphas) >= 2  # filled (pass) vs open/transparent (fail)
+
+
+def test_nullable_qc_statistics_remain_numeric_and_plot() -> None:
+    """CSV nulls normalize to numeric NaN instead of Matplotlib-breaking strings."""
+    parsed = QC.copy()
+    parsed["mean"] = parsed["mean"].map(str)
+    parsed["sd"] = parsed["sd"].map(str)
+    parsed.loc[1, ["mean", "sd"]] = ""
+    normalized = normalize_qc_metric_columns(parsed)
+    assert pd.isna(normalized.loc[1, "mean"])
+    assert pd.isna(normalized.loc[1, "sd"])
+    fig = cohort_qc_figure(normalized, min_n=3, raw=RAW)
+    assert len(fig.axes) == 4
+    plt.close(fig)
 
 
 # --- exemplar selection ----------------------------------------------------
