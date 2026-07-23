@@ -89,9 +89,15 @@ def _provenance_code_files():
                 continue
             if p.parts[:2] == ("workflow", "profiles"):
                 continue
+            if p.parts[:2] == ("metadata", "provenance"):
+                continue
             if any(part.endswith(".egg-info") for part in p.parts):
                 continue
             if p.name in _CODE_SKIP_NAMES:
+                continue
+            # Hydra parameters are captured by the resolved config, and catalog
+            # bindings are declared provenance inputs. Neither is source code.
+            if p.parts[0] == "conf" and p.parts[1:2] != ("theme",):
                 continue
             if p.suffix.lower() in _CODE_DOC_SUFFIXES:
                 continue
@@ -117,9 +123,23 @@ def _code_fingerprint():
 _CODE_FP = _code_fingerprint()
 
 
+def _hydra_config_fragments():
+    """Hydra YAML fragments beyond the root config, as declared DAG inputs."""
+    return sorted(
+        str(p)
+        for p in _cfg_Path("conf").rglob("*")
+        if p.is_file()
+        and p.suffix.lower() in {".yaml", ".yml"}
+        if p != _cfg_Path("conf/config.yaml")
+        and p != _cfg_Path("conf/catalog.yaml")
+        and p.parts[1:2] != ("theme",)
+    )
+
+
 rule resolve_config:
     input:
         config="conf/config.yaml",
+        fragments=_hydra_config_fragments(),
     params:
         # Rerun triggers: a runtime OR code change rebuilds the whole DAG.
         realized_fp=_REALIZED_FP,

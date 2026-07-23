@@ -1,0 +1,11 @@
+# AGENTS.md — `exploratory/`
+
+Root [`../AGENTS.md`](../AGENTS.md) applies.
+
+- Exploration may be rough, but it may not silently correct/drop data, expose a
+  secret, mutate raw inputs, or bypass a human research decision.
+- Nothing outside this directory may import or depend on exploratory code.
+- Do not present notebook output as a reproducible result. Promotion requires
+  tested `src/` code, a declared workflow target, QC, and provenance.
+- Strip Jupyter outputs and remove temporary exports before completion.
+- Do not reorganize or delete unrelated human notebooks as “cleanup.”

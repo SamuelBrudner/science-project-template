@@ -1,0 +1,19 @@
+# `conf/` — Scientific configuration and dataset catalog
+
+## Authority
+
+The marked contract in [`../README.md`](../README.md) owns placement. This page
+defines the split among configuration surfaces.
+
+| File / directory | Owns | Must not own |
+| --- | --- | --- |
+| `config.yaml` and `experiment/` | Scientific, identity-bearing parameters: thresholds, exclusions, model choices, seeds, and experiment overrides | Dataset paths, scheduler resources |
+| `catalog.yaml` | Logical dataset names mapped to paths and formats | Scientific decisions, DAG scheduling |
+| `theme/` | Source colors, typography, and figure dimensions | Generated TeX/Python theme artifacts |
+| `../workflow/config.yaml` | DAG selectors and topology, including the catalog key selected as an input | A duplicate path or scientific parameter |
+| `../workflow/profiles/` | Executor, scheduler, container, and compute-resource policy | Scientific meaning or dataset bindings |
+
+One fact has one owner. If a value appears in two surfaces, remove the duplicate
+and make the consumer read the authoritative source. All configuration is
+Git-tracked and provenance-hashed; secret values belong in environment variables
+or an ignored `.env`, never here.

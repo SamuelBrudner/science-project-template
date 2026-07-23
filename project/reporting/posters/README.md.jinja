@@ -1,21 +1,17 @@
 # `reporting/posters/` — Conference posters
 
-One folder per poster, named by **date + venue**: `YYYY-MM-venue/`
-(e.g. `2026-09-sfn/`). Like talks, a poster is a dated one-off — make a new folder
-for a new conference, don't overwrite.
+## Authority
 
-## Format & figures
-Large-format single page. Build from the shared `../_assets/lab.cls` (a
-poster-size class such as `tikzposter`/`beamerposter`, or `LaTeX`
-→ LaTeX) so it matches lab style.
+See the root [`README.md`](../../README.md), reporting
+[`README.md`](../README.md), and [`AGENTS.md`](../AGENTS.md).
 
-- **Use `../../results/figures/light/`** — posters are printed, so light/print
-  figures, and check they hold up at **high DPI and large physical size** (a plot
-  that reads fine in a paper can look thin on an A0 board). Set the target size in
-  `conf/theme/` if you keep a poster figure variant.
-- Reference figures; don't paste-and-forget. Record the results git SHA /
-  {{ data_versioning }} rev the poster was built from.
+Use one artifact folder per poster, conventionally `YYYY-MM-venue/`. Mutable
+source lives in the artifact folder. Use light/print data figures from
+`results/figures/light/` and authored schematics from `assets/figures/`; verify
+legibility at the intended physical dimensions.
 
-## Keep the printed version
-Archive the exact PDF you sent to the printer (poster deadlines are real and the
-printed artifact is what people saw) — same freeze logic as paper submissions.
+When a PDF is sent to a printer or conference, create
+`deliveries/<YYYY-MM-DD>-printer-final/` (or another precise milestone) with the
+exact PDF, exact figures, and `delivery.yaml`. That directory is immutable; a
+later venue or correction gets a new artifact/delivery. See
+[`../DELIVERIES.md`](../DELIVERIES.md).

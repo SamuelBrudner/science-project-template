@@ -1,24 +1,30 @@
-# `results/` — Generated outputs (DO NOT EDIT)
+# `results/` — Generated review and reporting outputs
 
-Everything here is a **build target**: produced by the pipeline, regenerable, and
-gitignored. Figures (`figures/light/`, `figures/dark/`) and tables (`tables/`).
+## Authority
 
-**Never edit anything in this folder by hand.** Your changes will be silently
-overwritten the next time the pipeline runs. To change a result, edit the code in
-`src/` or a parameter in `conf/` and rerun:
+The root [`README.md`](../README.md) contract defines what belongs here. Root
+and local [`AGENTS.md`](AGENTS.md) files prohibit hand-editing generated output.
 
-```bash
-snakemake results/figures/light/fig3.pdf   # rebuild one target
-snakemake                                  # rebuild everything
-```
+## Use this directory for
 
-## Figures: light vs dark
-- `figures/light/` — canonical, for print and papers (dark-on-white).
-- `figures/dark/` — derived, for on-screen slides (light-on-transparent).
+| Path | Contents |
+| --- | --- |
+| `qc/` | Machine-readable QC, exclusions, and diagnostic records (no plots) |
+| `figures/light/` | Canonical print/paper data figures, including QC graphics |
+| `figures/dark/` | Screen/dark-theme variants generated from the same sources |
+| `tables/` | Terminal report-ready summaries and model outputs |
+| `logs/` | Terminal execution logs and diagnostics for the current generated run |
+| `resolved_config.yaml` | Resolved configuration for the current execution |
+| `provenance.json` | Complete provenance for the current execution |
 
-Both come from the same plotting code and the palette in `conf/theme/`. See the
-theme system in [`../conf/theme/`](../conf/theme/).
+Everything here is declared pipeline output, ignored by Git, and regenerated.
+To change it, edit the producing code or configuration and rerun. Reusable
+analysis-ready datasets belong in `data/processed/`, not `results/tables/`.
+Non-regenerable authored schematics belong in `assets/figures/`.
 
-## This is for *generated* figures only
-Hand-drawn schematics and diagrams are **inputs**, not outputs — they live in
-[`../assets/figures/`](../assets/figures/) and are git-tracked.
+Snakemake's own cache/work state remains in `.snakemake/`; place only declared,
+human-inspectable terminal logs in `results/logs/`.
+
+Running the pipeline may replace current provenance. Durable registration copies
+it to `metadata/provenance/` and appends `metadata/runs.csv`; those actions are
+separate and human-approved.

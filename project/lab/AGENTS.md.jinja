@@ -1,20 +1,33 @@
-# AGENTS.md — `lab/` (wet-lab records)
+# AGENTS.md — `lab/`
 
-Root `../AGENTS.md` applies. Human orientation: [`README.md`](README.md).
+Root [`../AGENTS.md`](../AGENTS.md) applies. This directory describes the
+physical world, which an agent cannot observe.
 
-This folder records what happened at the bench. It is **provenance about the
-physical world**, and an agent cannot observe the physical world.
+## Non-negotiable local constraint
 
-## Hard rule
-**Do not fabricate.** Never invent or fill in sample manifests, protocol steps,
-reagent lots, measurements, dates, or results. If information is missing, ask the
-user or leave it blank — never guess. Inventing bench records corrupts provenance
-for the whole project.
+Do not fabricate or infer protocol execution, sample identity, reagent lot,
+measurement, observation, date, deviation, operator, or ELN link. Missing facts
+stay visibly missing until a person or authoritative record supplies them.
 
-## You may
-- Reformat or reorganize existing human-provided notes without changing their content.
-- Help draft a protocol *template* the user will fill in with real values.
-- Cross-check that `../metadata/` manifests are consistent with notes here and flag
-  discrepancies (don't silently "fix" them).
+## Allowed assistance
 
-The ELN is the system of record; treat this folder as the repo-side pointer to it.
+- Reformat user-provided facts without changing meaning.
+- Draft a reusable protocol template clearly marked as unexecuted.
+- Check supplied bench records against `metadata/` and report discrepancies
+  without silently correcting either side.
+- Maintain stable pointers after the user identifies the authoritative record.
+
+{% if bench_record_authority == "eln" -%}
+The ELN is authoritative for executed facts.
+{% if bench_record_location %}Use only the configured location
+`{{ bench_record_location }}`; do not broaden or substitute scope.
+{% else %}Its location is unconfigured. Ask the user; do not guess or create a
+repository fallback.
+{% endif %}
+
+Do not create executed records under `lab/records/` in ELN mode.
+{% else -%}
+Repository record mode is active. A person must supply/approve executed facts in
+`lab/records/`. Agents may format those facts but may not create the scientific
+content or certify completeness.
+{% endif -%}

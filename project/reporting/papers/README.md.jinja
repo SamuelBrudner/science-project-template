@@ -1,24 +1,25 @@
 # `reporting/papers/` — Manuscripts
 
-One folder per paper, named `YYYY-shortslug/` (e.g. `2026-mechanism/`).
+## Authority
+
+See the root [`README.md`](../../README.md), reporting
+[`README.md`](../README.md), and [`AGENTS.md`](../AGENTS.md).
+
+Use one folder per manuscript, conventionally `YYYY-short-slug/`:
 
 ```
-2026-mechanism/
-├── manuscript.tex        # or manuscript.qmd (LaTeX)
-├── figures/              # references ../../results/figures/light/
-└── submissions/          # FROZEN snapshots, one per milestone
+YYYY-short-slug/
+├── manuscript.tex          # or another declared source format
+└── deliveries/             # immutable dated submission/revision/published states
 ```
 
-## Lifecycle → git
-- Draft on a branch; open a PR to merge into `main`.
-- Tag milestones: `submitted-v1`, `revision-1`, `published`.
-- Because figures are build targets, a reviewer's "redo excluding subject 3" is a
-  config change + rerun + new tag — not a manual hunt through old files.
+Draft source evolves on ordinary branches and is human-approved. Reference light
+data figures from `results/figures/light/` and authored schematics from
+`assets/figures/`. Build LaTeX source with shared `../_assets/lab.cls` and
+`../_assets/refs.bib` where applicable.
 
-## `submissions/` — freeze, don't reference
-At each submission/revision, **copy** the built manuscript PDF *and the exact
-figures it used* into `submissions/<milestone>/`. This is the one place copying is
-correct: a submission is a historical fact you must be able to reconstruct byte
-for byte, even after the analysis moves on.
-
-Build with the shared `../_assets/lab.cls` + `refs.bib`.
+At submission, revision, or publication, create a universal delivery containing
+the exact PDF and exact figure bytes plus `delivery.yaml`; see
+[`../DELIVERIES.md`](../DELIVERIES.md). Do not edit a delivery in place.
+Existing `submissions/` folders from older versions are valid frozen history and
+must remain where they are.

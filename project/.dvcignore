@@ -1,1 +1,2 @@
 # Patterns for files DVC should ignore. See https://dvc.org/doc/user-guide/dvcignore
+data/interim/**

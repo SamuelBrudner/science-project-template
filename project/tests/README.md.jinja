@@ -1,0 +1,15 @@
+# `tests/` — Verification and synthetic fixtures
+
+## Authority
+
+The root [`README.md`](../README.md) contract governs placement.
+
+Tests belong here. `tests/fixtures/` contains only small, synthetic, openly
+Git-trackable inputs created to exercise code and pipeline behavior. A fixture is
+not acquired evidence and must never be copied into `data/raw/` or described as
+a real sample.
+
+Unit and property tests cover reusable `src/` behavior. Integration tests cover
+catalog/config resolution, declared pipeline paths, storage rules, provenance,
+and operator-command failure safety. Tests should fail loudly and should not
+depend on local secrets, ignored user data, network services, or scratch notes.

@@ -1,20 +1,28 @@
-# `data/` — Data layer
+# `data/` — Data payloads
 
-All data lives here and is versioned with **{{ data_versioning }}**, not git.
-Three stages, by how they are produced:
+## Authority
 
-| Subfolder | Produced by | Editable? |
-|-----------|-------------|:---------:|
-| `raw/` | The instrument / the world | ⛔ immutable |
-| `interim/` | Pipeline, mid-stream | ⛔ regenerated |
-| `processed/` | Pipeline, analysis-ready (parquet/zarr) | ⛔ regenerated |
+The marked repository contract in [`../README.md`](../README.md) defines
+placement, storage, and lifecycle. This page explains the three data states; it
+does not create additional homes.
 
-**Only `raw/` is irreplaceable.** `interim/` and `processed/` are cheap: they are
-rebuilt by `snakemake` from `raw/` + code, so deleting them costs only compute. If
-you ever feel the urge to hand-edit a file in `interim/` or `processed/`, the fix
-belongs in the pipeline instead.
+## Use this directory for
 
-- Populate with `{{ data_versioning }} pull`; publish with `{{ data_versioning }} push`.
-- Nothing in `data/` is committed to git except this README and `.gitignore`.
+| Subdirectory | Meaning | Storage | Retention |
+| --- | --- | --- | --- |
+| [`raw/`](raw/README.md) | Original acquired inputs | DVC payload, never Git | Immutable |
+| [`interim/`](interim/README.md) | Disposable same-pipeline scratch | Ignored, never DVC | Delete/regenerate freely |
+| [`processed/`](processed/README.md) | Reusable analysis-ready datasets | Ignored by Git; optionally DVC | Regenerate or snapshot deliberately |
 
-Immutability rules for `raw/` are in [`raw/README.md`](raw/README.md).
+The useful distinction is reuse, not file format: a Parquet file consumed by a
+later analysis belongs in `processed/`; a CSV created only for a paper table
+belongs in `results/tables/`.
+
+## Do not put here
+
+- Small synthetic test fixtures → `tests/fixtures/`.
+- Terminal figures, QC, report tables, or current provenance → `results/`.
+- Sample-to-file mappings and run registration → `metadata/`.
+
+Pipeline-owned files are never hand-edited. Change the upstream source,
+transformation, or scientific configuration and rebuild.

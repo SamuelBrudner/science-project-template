@@ -1,10 +1,11 @@
 # Science Project Template (Copier)
 
 An opinionated, FAIR, reproducible, agent-aware project template for lab-based
-science (wet-lab work + data + analysis + figures + reporting). Generates a repo
-with a four-layer architecture — library / pipeline / data / reporting — plus a
-themed light+dark figure system, nested `AGENTS.md` guardrails, secrets handling,
-and CI.
+science (wet-lab work + data + analysis + figures + reporting). It generates a
+repo with an explicit placement and lifecycle contract: humans and agents can
+tell where an artifact belongs, who may create it, and whether Git, DVC, or
+regeneration owns it. The scaffold also includes a themed light/dark figure
+system, inherited `AGENTS.md` guardrails, secrets handling, and CI.
 
 ## Requirements
 Install Copier with the `jinja2-time` extension **in the same environment** (it
@@ -21,9 +22,10 @@ pipx inject copier jinja2-time
 copier copy --trust gh:SamuelBrudner/science-project-template  path/to/new-project
 ```
 You'll be asked for project name, author, license (MIT/BSD-3), compute backend
-(local/SLURM), docs backend (Sphinx/MkDocs), Apptainer, Lab Tracker, and more.
+(local/SLURM), docs backend (Sphinx/MkDocs), Apptainer, Lab Tracker, where the
+authoritative bench record lives, and more.
 Only options the template implements and exercises in CI are offered; see the
-generated `docs/structure.md` "What is implemented vs. roadmap".
+generated `docs/structure.md` for the rendered profile and supported surface.
 
 ## Update an existing project when the template improves
 ```bash
@@ -43,7 +45,7 @@ AGENTS guardrails) propagate into already-generated repos via a merge.
 > **Publish as a tagged Git repository, not as a ZIP.** A plain archive carries no
 > Git history, so Copier records version `None`, cannot compute update ancestry, and
 > `copier update` won't work for anyone who generated from it. To publish: `git init`
-> → commit → `git tag v0.1.0` (or `v0.1.1`; see `CHANGELOG.md`) → push to the Git
+> → commit → `git tag v0.2.0` (or the next release; see `CHANGELOG.md`) → push to the Git
 > host, then generate with `gh:SamuelBrudner/science-project-template`. Any ZIP of this
 > template is a review/inspection artifact only.
 
@@ -51,6 +53,8 @@ AGENTS guardrails) propagate into already-generated repos via a merge.
 - `copier.yml` — the variable contract (all questions, defaults, conditionals).
 - `project/` — the templated repo (rendered on `copier copy`). Only `*.jinja`
   files are rendered; everything else is copied verbatim.
+- `AGENTS.md` — maintainer rules for changing the template itself. Generated
+  projects receive their own root and nested rules.
 
 ## Design rationale
 The full "why" behind every structural and tooling decision is in the generated
@@ -62,13 +66,16 @@ Apptainer on HPC · Sphinx+numpydoc docs · LaTeX papers (shared `lab.cls`) + Be
 slides (own class; sharing the font policy + theme colours) · strict theme
 validation with a light-vs-dark pixel-diff test ·
 colorblind-safe Okabe-Ito palette · gitleaks + commitizen · pydantic-settings
-secrets · manifest-driven QC + provenance.
+secrets · manifest-driven QC + current/archived provenance · immutable reporting
+deliveries · migration-safe local agent rules and human records.
 
 ## Verifying the template
-`template-tests/check.py` renders representative configs and runs every generated
-quality gate; `.github/workflows/template-ci.yml` runs it on every push. This
-template ships green across MIT/BSD, Sphinx/MkDocs, and example-on/off
-configurations. Run it locally with `python template-tests/check.py`.
+`template-tests/check.py` renders the documentation option matrix, exercises
+targeted authority/identity states, performs a genuine tagged Copier migration,
+and runs the generated-project quality gates. It also checks the canonical
+placement matrix against paths, links, ignore rules, and inherited agent rules.
+`.github/workflows/template-ci.yml` runs it on every push. Run it locally with
+`python template-tests/check.py`.
 
 ## License
 This template is licensed **MIT-0** (MIT No Attribution, see [`LICENSE`](LICENSE)).

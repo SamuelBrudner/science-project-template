@@ -1,69 +1,149 @@
 # Reproducing {{ project_name }}
 
-Step-by-step, environment-up reproduction.
+This guide starts from a fresh checkout and rebuilds declared outputs. The root
+[`README.md`](README.md) Repository contract is authoritative for every path and
+storage decision.
 
-## 1. Environment
+## 1. Create the environment
+
 ```bash
 conda env create -f environment.yml -p ./conda_env
 conda activate ./conda_env
 pip install -e ".[dev]"
 ```
-For a byte-reproducible environment, commit a lock and install from it:
-`conda-lock lock --file environment.yml -p linux-64 -p osx-arm64` then
-`conda-lock install --prefix ./conda_env conda-lock.yml`.
-{% if use_apptainer %}
-On HPC, build the container once, then run *inside* it (below):
+
+For a byte-pinned environment, generate and commit `conda-lock.yml`, then use:
+
 ```bash
-apptainer build container.sif containers/apptainer.def   # needs conda-lock.yml
+conda-lock install --prefix ./conda_env conda-lock.yml
+```
+{% if use_apptainer %}
+For containerized/HPC execution, build only after a compatible lock exists:
+
+```bash
+apptainer build container.sif containers/apptainer.def
 ```
 {% endif %}
 
-## 2. Secrets
+## 2. Configure secrets locally
+
 ```bash
-cp .env.example .env      # fill in required values (see src/{{ package_name }}/settings.py)
+cp .env.example .env
 ```
 
-## 3. Data (first time)
+Fill only required local values. `.env` is ignored; never commit it. Non-secret
+scientific parameters belong in `conf/config.yaml`, dataset bindings in
+`conf/catalog.yaml`, topology in `workflow/config.yaml`, and executor resources
+in `workflow/profiles/`.
+
+## 3. Fetch real data when configured
+
 ```bash
-bash scripts/setup_data.sh    # initialize DVC (idempotent)
-# {{ data_versioning }} pull  # only once a remote is configured and data pushed
+bash scripts/setup_data.sh
+# dvc pull  # after the project has a configured remote and DVC pointers
 ```
+
+Real `data/raw/` payloads are immutable and DVC-backed. Do not place synthetic
+fixtures there; the optional example reads the small Git-tracked files under
+`tests/fixtures/`.
+
+For each newly approved real input, use per-file tracking and commit its metadata
+before execution:
+
+```bash
+dvc add data/raw/<filename>
+git add data/raw/<filename>.dvc data/raw/.gitignore metadata/<manifest>.csv
+git commit -m "data: register raw input metadata"
+```
+
+The workflow rejects an untracked, modified, symlinked, or uncommitted real raw
+file. Pushing DVC payloads remains a separate human-approved action.
 
 ## 4. Run the pipeline
-```bash
-snakemake --cores 1                                # workstation
-{% if compute_backend == "slurm" %}snakemake --profile workflow/profiles/slurm        # cluster
-{% endif %}```
-{% if compute_backend == "slurm" and use_apptainer %}
-On the cluster, the SLURM profile sets `software-deployment-method: apptainer` and
-the Snakefile declares `container: "container.sif"`, so Snakemake runs **each job**
-inside the built image on its compute node. Build the image first:
-`apptainer build container.sif containers/apptainer.def`.
-{% endif %}
-{% if include_example -%}
-This validates `metadata/` schemas, generates the theme, runs the example analysis
-with deterministic seeds, and writes `results/figures/{light,dark}/` +
-`results/tables/`, then `results/provenance.json`.
-{%- else -%}
-This resolves + validates the Hydra config, generates the theme assets, and writes
-`results/provenance.json`. It does **not** yet produce QC, tables, or figures —
-this is a skeleton; add those stages (see `workflow/README.md`). Once your DAG
-reproduces your figures from `data/raw/`, that's the bar to hold.
-{%- endif %}
 
-## 5. Build reporting artifacts
 ```bash
-# figures are referenced from results/. Article PDFs (paper/poster/writeup) use the
-# shared lab.cls; the Beamer deck uses its own class (shared fonts.tex + colours).
+snakemake --cores 1
+{% if compute_backend == "slurm" %}# On the cluster:
+snakemake --profile workflow/profiles/slurm
+{% endif %}```
+
+{% if include_example -%}
+The bundled example validates `metadata/samples.example.csv`, produces per-unit
+and cohort QC under `results/qc/`, writes the reusable analysis-ready dataset to
+`data/processed/measurements.parquet`, renders light/dark figures under
+`results/figures/`, and writes `results/provenance.json`.
+{% else -%}
+This render contains no example stage or fixtures. The default DAG validates and
+resolves configuration, generates theme adapters, and writes current-run
+`results/provenance.json`. It does not promise example QC, processed data,
+figures, tables, reporting source, or a reporting Makefile.
+{% endif %}
+
+The pipeline may replace files in `data/interim/`, `data/processed/`, and
+`results/`; never edit those outputs by hand.
+
+## 5. Build reporting source
+
+{% if include_example -%}
+The optional reporting examples can be built with:
+
+```bash
 make -C reporting all
 ```
 
+Article-like examples use the shared `lab.cls`; the Beamer deck uses its own
+class while sharing fonts and generated theme colors.
+{% else -%}
+No example reporting source or `reporting/Makefile` exists. Build project-created
+artifact source with its documented command.
+{% endif %}
+
+Working PDFs are disposable. A sent/presented artifact becomes durable only
+through an explicitly approved immutable delivery.
+
 ## 6. Verify
+
 ```bash
-pytest
+snakemake --list
+pytest -q
 pre-commit run --all-files
+git status --short
 ```
-{% if include_example %}Every figure/table is a named target: `snakemake --list` shows them all.
-{%- else %}`snakemake --list` shows the current targets (resolved config, theme, provenance);
-your added figure/table rules will appear here too.
-{%- endif %}
+
+Verify each created/generated file against the marked root Repository contract:
+generated payloads must be ignored, DVC payloads must have trackable pointers,
+raw bytes must be unchanged, and no cache or notebook output may be staged.
+
+## 7. Register a run only after human approval
+
+`results/provenance.json` is current generated state and does not require
+registration. If a person decides the execution is scientifically durable:
+
+1. Commit every identity-bearing code, configuration, manifest, environment,
+   and DVC metadata file.
+2. Rerun the pipeline at that commit so current provenance records the same
+   `HEAD` and bytes.
+3. Register only after reviewing the generated manifest.
+
+```bash
+python scripts/register_run.py "short factual note"
+python scripts/lab_notebook_entry.py >> reporting/writeups/LAB_NOTEBOOK.md
+```
+
+Registration appends `metadata/runs.csv` and archives the complete manifest at
+`metadata/provenance/<execution_id>.json`. A person then completes the notebook
+entry's interpretation. Do not run these durable mutations without explicit
+approval.
+
+## 8. Freeze an external delivery only after human approval
+
+```bash
+python scripts/freeze_delivery.py \
+  --type <papers|posters|presentations|writeups> \
+  --artifact <slug> --milestone <slug> \
+  --payload <built-file> --figure <figure-file>
+```
+
+The execution must already be registered. The command creates a new immutable
+`reporting/<type>/<artifact>/deliveries/<date>-<milestone>/`; it never overwrites
+an existing delivery. See [`reporting/DELIVERIES.md`](reporting/DELIVERIES.md).

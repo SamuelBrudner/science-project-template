@@ -1,0 +1,17 @@
+# `scripts/` — Deliberate operator commands
+
+## Authority
+
+The root [`README.md`](../README.md) contract distinguishes these CLIs from
+Snakemake adapters in `workflow/scripts/`. Root and local
+[`AGENTS.md`](AGENTS.md) files govern mutations.
+
+Use this directory for commands a person deliberately invokes to operate the
+repository: initialize data versioning, register and archive a completed run,
+create a lab-notebook entry stub, or freeze a reporting delivery. These commands
+may coordinate repository boundaries and therefore do not belong in `src/`.
+
+Do not put Snakemake-only adapters here; those belong in `workflow/scripts/`.
+Do not hide a required operator action inside an import or ordinary pipeline
+rule. Each command must document its inputs, outputs, idempotence, failure
+behavior, and whether it needs human approval.

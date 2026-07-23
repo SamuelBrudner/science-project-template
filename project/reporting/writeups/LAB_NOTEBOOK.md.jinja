@@ -1,18 +1,29 @@
-# Lab Notebook — {{ project_name }}
+# Computational interpretation notebook — {{ project_name }}
 
-Chronological record of **Runs** — each a computational implementation of the
-project with a given set of scientific parameters. (Software fixes/refactors are
-Git commits, not new runs; see `AGENTS.md`.)
+This append-only notebook records **human interpretation of registered
+computational executions**. It does not replace either current generated
+`results/provenance.json`, the append-only `metadata/runs.csv` index, or the
+immutable `metadata/provenance/<execution_id>.json` archive.
 
-Generate a stub for the current run and fill in the human-owned fields:
+Workflow:
 
 ```bash
-python scripts/register_run.py "short note"          # log it in metadata/runs.csv
+# 1. Human approves durable registration of the current generated run.
+python scripts/register_run.py "short factual note"
+
+# 2. After registration succeeds, generate an entry stub and have a person
+#    complete objective, outcome, limitations, and interpretation.
 python scripts/lab_notebook_entry.py >> reporting/writeups/LAB_NOTEBOOK.md
 ```
 
-Machine fields (`execution_id`, `artifact_id`, parameters, git) are pulled from
-`results/provenance.json`; **a person writes** the objective, what worked / did
-not, and the biological/statistical interpretation.
+Each entry must name an execution ID already present in `metadata/runs.csv` and
+must agree with its archived provenance. Machine facts are retrieved, never
+typed from memory. A person owns the objective, observations about what worked or
+failed, limitations, biological/statistical interpretation, and follow-up
+decision. Agents may draft from supplied evidence but may not append/accept an
+interpretation without explicit approval.
 
-<!-- newest entries appended below this line -->
+Do not rewrite earlier entries. Correct an error with a new dated amendment that
+references the original execution and entry.
+
+<!-- append new registered-run entries below this line -->

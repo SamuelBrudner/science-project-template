@@ -1,0 +1,15 @@
+# `data/processed/` — Reusable analysis-ready data
+
+## Authority
+
+See the root [`README.md`](../../README.md) contract and
+[`../AGENTS.md`](../AGENTS.md).
+
+Use this directory for pipeline-generated datasets that form a reusable input
+to later stages or analyses: normalized tables, feature matrices, or converted
+formats with a declared schema. The pipeline owns their bytes.
+
+Payloads are ignored by Git. They are normally regenerated; snapshot a named
+dataset with {{ data_versioning }} only when its exact bytes must be shared or
+survive cleanup, and commit the pointer rather than the payload. Report-ready
+summaries and model outputs that are not reused belong in `results/tables/`.

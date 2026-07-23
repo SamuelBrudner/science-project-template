@@ -26,5 +26,5 @@ resolved = OmegaConf.to_container(cfg, resolve=True)
 validated = AppConfig(**resolved)  # fail loud on bad/missing params
 
 Path(snakemake.output.resolved).write_text(
-    yaml.safe_dump(validated.model_dump(), sort_keys=True)
+    yaml.safe_dump(validated.model_dump(exclude_none=True), sort_keys=True)
 )

@@ -1,0 +1,14 @@
+# AGENTS.md — `tests/`
+
+Root [`../AGENTS.md`](../AGENTS.md) applies.
+
+- Keep fixtures synthetic, minimal, deterministic, and clearly labelled.
+- Test observable contracts, including failure behavior; do not weaken or delete
+  a gate merely to make a change pass.
+- Never read a developer's real `data/raw/`, `.env`, ELN, or Lab Tracker records
+  from the default test suite.
+- Tests may create temporary artifacts only under test-managed temporary
+  directories and must clean them up. Do not leave generated files in canonical
+  project directories after completion.
+- A changed public function, data schema, canonical path, or durable mutation
+  protocol needs corresponding tests.

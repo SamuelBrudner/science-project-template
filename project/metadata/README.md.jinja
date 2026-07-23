@@ -1,19 +1,46 @@
-# `metadata/` — Schemas & sample manifests
+# `metadata/` — Validated identity and durable run records
 
-The bridge from bench to bytes. This is where physical samples connect to data
-files, validated so provenance is traceable end to end.
+## Authority
 
-## What belongs here
-- `schemas.py` — Pydantic models defining every metadata table (the contract).
-- Sample manifests: `sample_id → condition → data file`, as validated CSVs.
-- `samples.example.csv` — one small, valid example row set. **Not fake bulk data.**
+The root [`README.md`](../README.md) contract defines this directory's placement
+and lifecycle. Root and local [`AGENTS.md`](AGENTS.md) files define who may
+change factual records.
 
-## Rules
-- Every manifest must validate against a schema in `schemas.py`. CI enforces this;
-  an invalid manifest fails the build (fail loud, fail fast).
-- Manifests are the **source of truth for what raw files exist** — the pipeline
-  reads them to find inputs. A file in `data/raw/` with no manifest row is invisible.
-- Small enough to track directly in git (unlike `data/`, which uses
-  {{ data_versioning }}).
+## Use this directory for
 
-Change the schema → update `schemas.py`, then fix every manifest until CI is green.
+- `schemas.py`: Pydantic schemas for machine-readable project metadata.
+- `path_safety.py`: shared no-symlink/no-escape checks used by durable-record
+  operator commands.
+- `provenance_records.py`: the canonical parser/serializer shared by run
+  registration, delivery freezing, and notebook-entry generation.
+- Validated manifests mapping stable sample identifiers and conditions to
+  catalogued raw files.
+- `runs.csv`: the append-only index of deliberately registered executions.
+- `provenance/<execution_id>.json`: the immutable complete provenance manifest
+  archived when that execution is registered.
+
+{% if include_example %}`samples.example.csv` is a small manifest for the bundled
+synthetic fixture. It demonstrates the schema; it is not evidence that a real
+sample or acquisition exists.
+{% endif %}
+
+Sample manifests selected by the DAG stay under `metadata/`. Every `file` value
+is repository-relative and below `data/raw/`; the only placement exception is a
+small synthetic input below `tests/fixtures/raw/`. Each real raw entry must have
+clean, committed adjacent DVC metadata before DAG construction.
+
+## Lifecycle
+
+The pipeline reads manifests but does not invent them. It may generate current
+provenance in `results/provenance.json`; that file becomes durable only when a
+person approves run registration. Registration serializes writers, publishes the
+immutable archive first, then atomically rewrites the ledger. This is not a
+two-file atomic transaction: a retry idempotently completes a safe archive-only
+state left by an interrupted ledger write. An execution ID may not silently
+acquire different content. Registration rehashes files through no-follow reads,
+revalidates the scientific config and both content identities, and requires all
+identity-bearing Git/DVC metadata to be committed and unchanged at the recorded
+revision.
+
+Keep these small records in Git. Raw and processed payload bytes remain under
+`data/` and use DVC according to the root contract.

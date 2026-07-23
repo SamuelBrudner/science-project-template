@@ -13,13 +13,17 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, os.getcwd())  # repo root, so top-level `metadata` imports
+from metadata.path_safety import open_binary_no_follow  # noqa: E402
 from metadata.schemas import SampleQC  # noqa: E402
 from {{ package_name }}.qc import summarize_sample  # noqa: E402
 
 snakemake = snakemake  # noqa: F821
 
 cfg = yaml.safe_load(Path(snakemake.input.config).read_text())
-values = pd.read_csv(snakemake.input.raw)[cfg["example"]["value_col"]]
+with open_binary_no_follow(
+    Path.cwd(), Path(snakemake.input.raw), label="raw sample input"
+) as raw_handle:
+    values = pd.read_csv(raw_handle)[cfg["example"]["value_col"]]
 metrics = summarize_sample(values, cfg["qc"]["min_n"])
 
 qc = SampleQC(

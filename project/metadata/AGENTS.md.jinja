@@ -1,0 +1,24 @@
+# AGENTS.md — `metadata/`
+
+Root [`../AGENTS.md`](../AGENTS.md) applies. Placement comes from the root
+[`README.md`](../README.md) contract.
+
+## Additional constraints
+
+- Schemas may be changed with corresponding tests and migrations. Factual rows
+  may be transcribed only from user-supplied or authoritative records; never
+  infer sample identities, conditions, files, dates, or execution facts.
+- `runs.csv` is append-only. Do not edit, reorder, deduplicate, or repair it by
+  hand. Invoke the registration command only after explicit user approval.
+- `provenance/<execution_id>.json` is immutable after registration. Never replace
+  it or accept the same execution ID with different content.
+- A failed or ambiguous registration must fail loudly. It must never leave a
+  ledger row without its archive or alter an existing record. An archive-only
+  state can remain after a ledger-write failure; verify it and retry the same
+  registration so the idempotent tool completes it. Do not delete or improvise
+  a partial repair.
+- Do not move sample manifests into `lab/` or `data/`. Bench narrative belongs in
+  the configured bench record; validated machine mappings belong here.
+
+You may validate schemas/manifests and inspect current or archived provenance
+without approval. Validation does not authorize changing a factual record.

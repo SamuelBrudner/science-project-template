@@ -1,16 +1,21 @@
-# `reporting/writeups/` — Internal written updates & reports
+# `reporting/writeups/` — Internal reports and interpretation
 
-Prose that isn't a manuscript: lab-meeting writeups, quarterly progress, funder
-reports, internal analysis summaries. One folder per writeup, named by period:
-`YYYY-Qn-slug/` or `YYYY-MM-slug/`.
+## Authority
 
-## Keep it lightweight
-Writeups are **Markdown → LaTeX** (`writeup.md`) so producing one stays a
-two-minute job, not a formatting chore. They still build with the shared
-`../_assets/` style, so they look consistent with papers and slides.
+See the root [`README.md`](../../README.md), reporting
+[`README.md`](../README.md), and [`AGENTS.md`](../AGENTS.md).
 
-- Reference figures from `../../results/figures/light/`; don't copy.
-- Point-in-time — write a new one, don't overwrite the last.
+Use one folder per lab update, progress report, funder report, or internal
+analysis summary, conventionally `YYYY-Qn-short-slug/` or
+`YYYY-MM-short-slug/`. Mutable Markdown/LaTeX source may reference light data
+figures from `results/figures/light/` and authored schematics from
+`assets/figures/`.
 
-If a writeup starts growing into a manuscript, graduate it to
-[`../papers/`](../papers/README.md).
+`LAB_NOTEBOOK.md` is a special append-only human interpretation log keyed to
+registered computational executions; it is not ordinary writeup source and does
+not replace current/archived provenance.
+
+When a writeup is distributed externally or used as a milestone record, create
+an immutable delivery with the exact payload and figures. See
+[`../DELIVERIES.md`](../DELIVERIES.md). If a writeup becomes a manuscript, create
+the corresponding artifact under `papers/`; preserve its prior history.

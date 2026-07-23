@@ -1,17 +1,43 @@
-# `lab/` — Wet-lab protocols & records
+# `lab/` — Protocols and bench-record boundary
 
-The human/bench side of the project: protocols, reagent and sample notes, and the
-link to the electronic lab notebook (ELN). This connects physical experiments to
-the `metadata/` manifests that name the resulting data files.
+## Authority
 
-## What belongs here
-- Protocols and SOPs (versioned as text/PDF).
-- Notes that give context to samples — but the machine-readable
-  `sample_id → condition → file` mapping lives in [`../metadata/`](../metadata/),
-  validated.
+The root [`README.md`](../README.md) contract defines placement. Bench facts are
+human-owned; local [`AGENTS.md`](AGENTS.md) prohibits invention.
 
-## Rules
-- **People maintain this folder.** Automated agents do **not** fabricate sample
-  manifests, protocol steps, or measurements here — that would invent provenance.
-- Prefer the ELN as system of record; keep this folder as the repo-side reference
-  and pointer to it.
+## Use this directory for
+
+- Reusable protocols and SOPs, preferably as diffable text plus any necessary
+  source attachment.
+- Stable pointers connecting repository samples/analyses to the configured
+  bench-record authority.
+- {% if bench_record_authority == "repository" %}Human-created executed records
+  under [`records/`](records/README.md).{% else %}Context needed to find the
+  authoritative ELN record, without copying its executed facts into a competing
+  repository log.{% endif %}
+
+Machine-readable `sample_id → condition → file` mappings belong in `metadata/`,
+not here. Raw measurements belong in `data/raw/`. Questions, claims, and
+research decisions belong {% if use_lab_tracker %}in Lab Tracker{% else %}in the
+documented repository decision fallback{% endif %}, not in a protocol.
+
+## Configured bench-record authority
+
+{% if bench_record_authority == "eln" -%}
+**Electronic lab notebook (ELN).** Executed protocol facts, observations,
+reagent lots, sample handling, dates, and deviations remain in the ELN.
+{% if bench_record_location %}
+Configured location: `{{ bench_record_location }}`.
+{% else %}
+**Location: UNCONFIGURED.** Do not guess an ELN notebook, workspace, project, or
+entry. Ask the user before relying on or recording bench facts.
+{% endif %}
+
+This repository may keep a stable pointer and reusable protocol source, not a
+second hand-maintained transcription of the executed record.
+{% else -%}
+**Repository records.** Human-created executed facts live only under
+`lab/records/`. Use one dated record per execution and link its stable sample IDs
+to validated `metadata/` rows. Do not use ordinary `notes/` or protocol source as
+an execution log.
+{% endif -%}

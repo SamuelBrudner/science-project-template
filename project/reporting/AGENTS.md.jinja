@@ -1,29 +1,37 @@
-# AGENTS.md — `reporting/` (papers, posters, slides, writeups)
+# AGENTS.md — `reporting/`
 
-Root `../AGENTS.md` applies. Human orientation: [`README.md`](README.md). This is
-human-authored, human-owned writing — agents assist, they don't author.
+Root [`../AGENTS.md`](../AGENTS.md) applies. Reporting source and interpretation
+are human-owned; agents assist and hand drafts back for review.
 
-## You may
-- Draft and revise prose *for the user to review* (intro scaffolding, methods from
-  the actual pipeline, figure legends).
-- Wire figure references to `../results/figures/light/` (papers/posters/writeups) or
-  `../results/figures/dark/` (dark slides).
-- Fix LaTeX/Markdown build errors; keep `_assets/refs.bib` tidy.
-- Build paper/poster/writeup PDFs with the shared `_assets/lab.cls`; the Beamer
-  deck uses its own class and shares only `_assets/fonts.tex` + the theme colours.
+## Allowed assistance
 
-## You may not (without the user)
-- **Finalize or commit manuscript / abstract / grant text.** A human owns the
-  words. Draft, then hand off.
-- **Fabricate results, numbers, or citations.** Every figure must point at a real
-  build target in `results/`; every citation must be a real entry the user added.
-  If a number isn't in `results/`, don't write it.
-- **Edit `_assets/theme-colors.tex`.** It is generated from `../conf/theme/` — change
-  the theme source, not the generated file.
+- Draft/revise prose explicitly for human review, based on real project evidence.
+- Wire data-derived figures from `../results/figures/` and authored schematics
+  from `../assets/figures/`.
+- Build artifacts, fix source/build errors, and maintain shared references/style.
+- Validate an existing delivery without changing it.
 
-## Conventions to honor
-- Reference figures; don't copy them — **except** in `papers/*/submissions/`, where
-  freezing (copying the exact PDF + figures) is required.
-- Record the results git SHA / {{ data_versioning }} rev an artifact was built from.
-- Dated/point-in-time artifacts (decks, submissions) are not edited in place — make
-  a new one.
+## Human gates
+
+- Do not finalize, commit as accepted, submit, or otherwise represent scientific
+  prose as human-approved without the user.
+- Do not fabricate or interpolate results, numbers, citations, interpretations,
+  registered-run IDs, figure provenance, or delivery metadata.
+- Creating a delivery freezes a point-in-time external artifact and is a durable
+  mutation. Run the delivery command only with explicit user approval.
+- Do not edit a delivery in place. A change requires a new dated milestone.
+
+## Source and delivery rules
+
+- While drafting, reference canonical generated/authored figure sources rather
+  than maintaining copies. Copying exact payloads and figures is required only
+  inside an immutable delivery.
+- A delivery must use a human-approved registered provenance archive, not merely
+  whatever happens to be in current `results/provenance.json`.
+- Keep text and files up to 1 MiB in Git. Larger delivery binaries use
+  {{ data_versioning }} at the same logical path; commit the pointer and
+  `delivery.yaml`.
+- Never edit generated `_assets/theme-colors*.tex`; change `conf/theme/` and
+  rebuild.
+- Preserve legacy `submissions/` snapshots. Do not rename or migrate user
+  history automatically.

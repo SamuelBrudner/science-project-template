@@ -1,0 +1,22 @@
+# AGENTS.md — `scripts/`
+
+Root [`../AGENTS.md`](../AGENTS.md) applies. Operator CLIs sit at trust
+boundaries; inspect the command and its documented writes before invoking it.
+
+## Permission boundary
+
+- Read-only validation and setup that changes only ignored local state may run
+  as part of an authorized task.
+- Adding/moving raw data, `{{ data_versioning }} push`, registering a run,
+  appending `metadata/runs.csv`, archiving registered provenance, adding a human
+  lab-notebook interpretation, freezing a delivery, and uploading/mutating Lab
+  Tracker records require explicit user approval.
+- Approval for one named mutation does not authorize adjacent mutations.
+- Never bypass idempotence, locks, conflict checks, atomic writes, or validation.
+  On failure, report the error and verify durable state was not partially changed.
+- Retrieve Git/DVC/run identities from their authoritative tools and files; do
+  not fill missing fields with plausible values.
+
+Keep reusable computation in `src/`; keep Snakemake adaptation in
+`workflow/scripts/`. An operator CLI may call both, but it must make its side
+effects visible at the command boundary.

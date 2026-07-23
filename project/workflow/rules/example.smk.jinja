@@ -4,31 +4,121 @@
 # Sample wildcards and raw paths come from the validated metadata manifest.
 
 import re
+import unicodedata
+from pathlib import Path
 
 import pandas as pd
 
-# Manifest path comes from the (thin) workflow config, not a hardcoded literal.
-_MANIFEST_PATH = config["sample_manifest"]
+from {{ package_name }}.catalog import dataset_path, load_catalog
+from metadata.path_safety import (
+    ensure_real_directory,
+    open_binary_no_follow,
+    require_clean_dvc_outputs,
+    require_regular_file,
+)
+from metadata.schemas import SampleRecord, validate_sample_manifest_path
+
+# The workflow config selects a LOGICAL dataset; conf/catalog.yaml owns the path
+# and format binding. This keeps CLI overrides from smuggling arbitrary paths into
+# the DAG and gives notebooks, scripts, and Snakemake one dataset vocabulary.
+_CATALOG_PATH = "conf/catalog.yaml"
+_REPOSITORY_ROOT = Path.cwd()
+require_regular_file(
+    _REPOSITORY_ROOT, Path(_CATALOG_PATH), label="data catalog"
+)
+_CATALOG = load_catalog(_CATALOG_PATH)
+_MANIFEST_KEY = config.get("sample_manifest_dataset")
+if not isinstance(_MANIFEST_KEY, str) or not _MANIFEST_KEY:
+    raise ValueError("workflow/config.yaml must select sample_manifest_dataset")
+if _MANIFEST_KEY not in _CATALOG.datasets:
+    raise KeyError(
+        f"unknown sample_manifest_dataset {_MANIFEST_KEY!r}; "
+        f"known catalog datasets: {sorted(_CATALOG.datasets)}"
+    )
+_MANIFEST_ENTRY = _CATALOG.datasets[_MANIFEST_KEY]
+if _MANIFEST_ENTRY.format != "csv":
+    raise ValueError(
+        f"sample manifest {_MANIFEST_KEY!r} must use format 'csv', got "
+        f"{_MANIFEST_ENTRY.format!r}"
+    )
+_MANIFEST_PATH = validate_sample_manifest_path(
+    str(dataset_path(_MANIFEST_KEY, _CATALOG))
+)
+_MEASUREMENTS_PATH = str(dataset_path("measurements", _CATALOG))
+_QC_SUMMARY_PATH = str(dataset_path("qc_summary", _CATALOG))
+for _output in (_MEASUREMENTS_PATH, _QC_SUMMARY_PATH):
+    ensure_real_directory(
+        _REPOSITORY_ROOT,
+        Path(_output).parent,
+        label=f"catalog output parent for {_output}",
+    )
 # All-string read with NA-parsing off so schema string ids survive ("001" stays
 # "001", not int 1; "NA" stays "NA").
-_MANIFEST = pd.read_csv(_MANIFEST_PATH, dtype=str, keep_default_na=False)
-# Fail loud on duplicate sample IDs — otherwise dict() would silently drop rows
-# and the DAG would disagree with aggregation.
-_dups = _MANIFEST["sample_id"][_MANIFEST["sample_id"].duplicated()].tolist()
-if _dups:
-    raise ValueError(f"duplicate sample_id(s) in {_MANIFEST_PATH}: {sorted(set(_dups))}")
-# sample_id becomes a path component (results/qc/<id>.json); reject anything that
-# could escape the output directory BEFORE the DAG builds output paths from it.
-# fullmatch (not match): a trailing "\n" slips past "$", so "abc\n" must be caught.
-_SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
-_unsafe = [s for s in _MANIFEST["sample_id"] if not _SAFE_ID.fullmatch(s) or ".." in s]
-if _unsafe:
-    raise ValueError(
-        f"unsafe sample_id(s) in {_MANIFEST_PATH} (path traversal risk): {_unsafe}"
+with open_binary_no_follow(
+    _REPOSITORY_ROOT, Path(_MANIFEST_PATH), label="sample manifest"
+) as _manifest_handle:
+    _MANIFEST_ROWS = pd.read_csv(
+        _manifest_handle, dtype=str, keep_default_na=False
+    ).to_dict("records")
+# Validate every row BEFORE sample IDs or raw paths become Snakemake wildcards and
+# inputs. The validate_metadata rule repeats the boundary and checks file existence,
+# but DAG construction itself must never consume an absolute or misplaced path.
+_SAMPLE_RECORDS = [SampleRecord(**row) for row in _MANIFEST_ROWS]
+# Fail loud before constructing wildcard maps: sample identifiers and acquired
+# files are both one-to-one experimental units, never aliases for replicates.
+_SAMPLE_IDS = [record.sample_id for record in _SAMPLE_RECORDS]
+_portable_ids = {}
+for _sample_id in _SAMPLE_IDS:
+    _portable_id = unicodedata.normalize("NFC", _sample_id).casefold()
+    if _portable_id in _portable_ids:
+        raise ValueError(
+            f"duplicate or portable-colliding sample_id(s) in {_MANIFEST_PATH}: "
+            f"{_sample_id!r} and {_portable_ids[_portable_id]!r}"
+        )
+    _portable_ids[_portable_id] = _sample_id
+
+_portable_paths = {}
+_physical_files = {}
+for _record in _SAMPLE_RECORDS:
+    _candidate = require_regular_file(
+        _REPOSITORY_ROOT,
+        Path(_record.file),
+        label=f"raw input for sample {_record.sample_id}",
     )
-SAMPLES = _MANIFEST["sample_id"].tolist()
-RAW = dict(zip(_MANIFEST["sample_id"], _MANIFEST["file"]))
-COND = dict(zip(_MANIFEST["sample_id"], _MANIFEST["condition"]))
+    _portable_key = unicodedata.normalize("NFC", _record.file).casefold()
+    if _portable_key in _portable_paths:
+        raise ValueError(
+            f"duplicate raw file path in {_MANIFEST_PATH}: {_record.file!r} "
+            f"aliases {_portable_paths[_portable_key]!r}"
+        )
+    _portable_paths[_portable_key] = _record.file
+    _stat = _candidate.stat(follow_symlinks=False)
+    _physical_key = (_stat.st_dev, _stat.st_ino)
+    if _physical_key in _physical_files:
+        raise ValueError(
+            f"raw inputs in {_MANIFEST_PATH} resolve to the same physical file: "
+            f"{_record.file!r} and {_physical_files[_physical_key]!r}"
+        )
+    _physical_files[_physical_key] = _record.file
+_REAL_RAW = [
+    Path(record.file)
+    for record in _SAMPLE_RECORDS
+    if record.file.startswith("data/raw/")
+]
+require_clean_dvc_outputs(_REPOSITORY_ROOT, _REAL_RAW, label="real raw input")
+DVC_METADATA = sorted(
+    {
+        metadata
+        for path in _REAL_RAW
+        for metadata in (
+            f"{path.as_posix()}.dvc",
+            f"{path.parent.as_posix()}/.gitignore",
+        )
+    }
+)
+SAMPLES = _SAMPLE_IDS
+RAW = {record.sample_id: record.file for record in _SAMPLE_RECORDS}
+COND = {record.sample_id: record.condition for record in _SAMPLE_RECORDS}
 
 
 # Constrain {sample} to the known IDs so non-sample artifacts (e.g.
@@ -39,6 +129,7 @@ wildcard_constraints:
 
 rule validate_metadata:
     input:
+        catalog=_CATALOG_PATH,
         manifest=_MANIFEST_PATH,
     params:
         # DAG root: a runtime OR code change re-validates too (see config.smk).
@@ -69,16 +160,16 @@ rule aggregate:
         qc=expand("results/qc/{s}.json", s=SAMPLES),
         config="results/resolved_config.yaml",
     output:
-        table="results/tables/measurements.parquet",
-        qc_summary="results/qc/qc_summary.csv",
-        excluded="results/excluded_samples.json",
+        table=_MEASUREMENTS_PATH,
+        qc_summary=_QC_SUMMARY_PATH,
+        excluded="results/qc/excluded_samples.json",
     script:
         "../scripts/aggregate.py"
 
 
 rule example_figure:
     input:
-        table="results/tables/measurements.parquet",
+        table=_MEASUREMENTS_PATH,
         config="results/resolved_config.yaml",
         mpl_light="src/{{ package_name }}/_generated/light.mplstyle",
         mpl_dark="src/{{ package_name }}/_generated/dark.mplstyle",
@@ -96,7 +187,7 @@ rule example_figure:
 # condition. A raw QC exemplar distinct from the results figure.
 rule qc_distribution:
     input:
-        qc_summary="results/qc/qc_summary.csv",
+        qc_summary=_QC_SUMMARY_PATH,
         manifest=_MANIFEST_PATH,
         raw=[RAW[s] for s in SAMPLES],
         config="results/resolved_config.yaml",

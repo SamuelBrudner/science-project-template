@@ -1,0 +1,595 @@
+"""Pydantic schemas for project metadata (samples, funding).
+
+The contract that CI validates. A manifest that doesn't match fails the build
+(fail loud). See docs/structure.md sections 3 & 10.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import hashlib
+import json
+import re
+import unicodedata
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+#: A sample_id becomes a path component (results/qc/<id>.json), so it must be
+#: filesystem-safe: no separators, no traversal. Leading-zero / numeric ids are
+#: still allowed ("001"). Unanchored + ``fullmatch`` (below) is deliberate: a
+#: trailing ``\n`` slips past ``$`` with ``match``, so ``"abc\n"`` would wrongly
+#: pass — ``fullmatch`` requires the WHOLE string, newline included, to conform.
+_SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+_CONTENT_ID = re.compile(r"[0-9a-f]{12}")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+_DELIVERY_ID = re.compile(r"\d{4}-\d{2}-\d{2}-[A-Za-z0-9][A-Za-z0-9._-]*")
+_SAMPLE_FILE_ROOTS = (PurePosixPath("data/raw"), PurePosixPath("tests/fixtures/raw"))
+_SAMPLE_MANIFEST_ROOTS = (PurePosixPath("metadata"),)
+_GENERATED_INPUT_PREFIXES = (
+    "data/processed/",
+    "results/",
+    "reporting/_assets/",
+)
+_PACKAGE_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+def _validate_safe_id(value: str) -> str:
+    """Reject a sample_id that could escape its output directory."""
+    if not _SAFE_ID.fullmatch(value) or ".." in value:
+        raise ValueError(
+            f"sample_id {value!r} is not filesystem-safe: use only A-Za-z0-9._- "
+            "(no path separators or '..'), starting with an alphanumeric."
+        )
+    return value
+
+
+def _validate_repo_relative_child(
+    value: str, *, roots: tuple[PurePosixPath, ...], label: str
+) -> str:
+    """Require a portable repository-relative path below one approved root."""
+    path = PurePosixPath(value)
+    windows_path = PureWindowsPath(value)
+    allowed = ", ".join(f"{root.as_posix()}/" for root in roots)
+    unsafe = (
+        not value
+        or not value.isprintable()
+        or "\\" in value
+        or path.is_absolute()
+        or windows_path.is_absolute()
+        or bool(windows_path.drive)
+        or ".." in path.parts
+        or path.as_posix() != value
+        or not any(path != root and path.is_relative_to(root) for root in roots)
+    )
+    if unsafe:
+        raise ValueError(
+            f"{label} {value!r} must be a printable repository-relative file "
+            f"below exactly one of: {allowed}"
+        )
+    return value
+
+
+def validate_sample_file_path(value: str) -> str:
+    """Constrain acquired inputs and the explicit synthetic-fixture exception."""
+    validated = _validate_repo_relative_child(
+        value, roots=_SAMPLE_FILE_ROOTS, label="sample file path"
+    )
+    path = PurePosixPath(validated)
+    if path.is_relative_to(PurePosixPath("data/raw")) and (
+        path.name.startswith(".git")
+        or path.name in {".dvcignore", "dvc.lock", "dvc.yaml"}
+        or path.suffix == ".dvc"
+    ):
+        raise ValueError("real raw payload path uses a reserved Git/DVC metadata name")
+    return validated
+
+
+def validate_sample_manifest_path(value: str) -> str:
+    """Keep catalog-selected sample manifests in their canonical metadata home."""
+    return _validate_repo_relative_child(
+        value, roots=_SAMPLE_MANIFEST_ROOTS, label="sample manifest path"
+    )
+
+
+def _validate_content_id(value: str) -> str:
+    """Require the short lowercase-hex IDs emitted by provenance.py."""
+    if not _CONTENT_ID.fullmatch(value):
+        raise ValueError("must be a 12-character lowercase hexadecimal id")
+    return value
+
+
+def _validate_sha256(value: str) -> str:
+    """Require one complete lowercase SHA-256 digest."""
+    if not _SHA256.fullmatch(value):
+        raise ValueError("must be a 64-character lowercase SHA-256 digest")
+    return value
+
+
+def _validate_repo_file_path(value: str, *, label: str) -> str:
+    """Require one canonical, portable repository-relative file path."""
+    posix_path = PurePosixPath(value)
+    windows_path = PureWindowsPath(value)
+    unsafe = (
+        not value
+        or not value.isprintable()
+        or "\\" in value
+        or posix_path.is_absolute()
+        or windows_path.is_absolute()
+        or bool(windows_path.drive)
+        or ".." in posix_path.parts
+        or posix_path.as_posix() != value
+        or value.endswith("/")
+        or value == "."
+    )
+    if unsafe:
+        raise ValueError(
+            f"{label} {value!r} must be a canonical printable POSIX "
+            "repository-relative file path"
+        )
+    return value
+
+
+def _validate_sha256_map(value: dict[str, str], *, label: str) -> dict[str, str]:
+    """Validate canonical path keys and complete lowercase SHA-256 values."""
+    for path, digest in value.items():
+        _validate_repo_file_path(path, label=f"{label} path")
+        _validate_sha256(digest)
+    return value
+
+
+class SampleRecord(BaseModel):
+    """One row of the sample manifest: bench sample -> data file."""
+
+    model_config = ConfigDict(extra="forbid")
+    sample_id: str
+    condition: str
+    # Acquired inputs live under data/raw/. The bundled synthetic example is the
+    # only placement exception and lives under tests/fixtures/raw/.
+    file: str
+
+    _check_id = field_validator("sample_id")(_validate_safe_id)
+    _check_file = field_validator("file")(validate_sample_file_path)
+
+
+class Award(BaseModel):
+    """One funding award (see funding.yaml)."""
+
+    model_config = ConfigDict(extra="forbid")
+    funder: str
+    funder_ror: str | None = None
+    program: str | None = None
+    award_id: str
+    award_title: str
+    recipient_orcid: str | None = None
+    start: str | None = None
+    end: str | None = None
+
+
+class Funding(BaseModel):
+    """Top-level funding.yaml document."""
+
+    model_config = ConfigDict(extra="forbid")
+    awards: list[Award]
+    acknowledgement: str
+
+
+class ExampleCfg(BaseModel):
+    """Parameters for the example analysis (delete with the example stage)."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    value_col: str
+    group_col: str
+    units: str
+
+
+class QCCfg(BaseModel):
+    """Quality-control thresholds."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    min_n: int = Field(ge=1)
+    min_samples_per_condition: int = Field(ge=1)
+
+
+class AppConfig(BaseModel):
+    """The resolved Hydra config, validated before the pipeline uses it.
+
+    This is the contract between conf/ and the DAG: the resolved artifact is a
+    declared pipeline input, so changing a parameter invalidates outputs.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    seed: int = Field(ge=0){% if include_example %}
+    example: ExampleCfg
+    qc: QCCfg{% endif %}
+
+
+class SampleQC(BaseModel):
+    """Machine-readable QC result for one sample."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
+    sample_id: str
+    condition: str
+    n: int = Field(ge=0)
+    n_missing: int = Field(ge=0)
+    mean: float | None = Field(allow_inf_nan=False)
+    sd: float | None = Field(allow_inf_nan=False)
+    qc_pass: bool
+
+    _check_id = field_validator("sample_id")(_validate_safe_id)
+
+    @model_validator(mode="after")
+    def _check_defined_statistics(self) -> SampleQC:
+        """Undefined empty/singleton statistics use JSON null, never NaN."""
+        if (self.n == 0) != (self.mean is None):
+            raise ValueError("mean must be null exactly when no finite values exist")
+        if (self.n < 2) != (self.sd is None):
+            raise ValueError("sd must be null exactly when fewer than two values exist")
+        return self
+
+
+class ProvenanceGitIdentity(BaseModel):
+    """Descriptive Git state recorded by the provenance producer."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    rev: str | None
+    dirty: bool | Literal["unknown"]
+
+    @field_validator("rev")
+    @classmethod
+    def _check_revision(cls, value: str | None) -> str | None:
+        if value is not None and (not value or not value.isprintable()):
+            raise ValueError("git revision must be null or a nonempty printable string")
+        return value
+
+
+class ProvenanceDirectURL(BaseModel):
+    """Source identity for an editable, VCS, or direct-URL installation."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    url: str | None
+    commit: str | None
+    editable: bool
+
+
+class ProvenanceRealizedEnvironment(BaseModel):
+    """Exact Python runtime and installed distributions that executed the DAG."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    python: str
+    implementation: str
+    platform: str
+    packages: list[str]
+    package_conflicts: dict[str, list[str]]
+    direct_url_sources: dict[str, ProvenanceDirectURL]
+
+    @field_validator("python", "implementation", "platform")
+    @classmethod
+    def _check_runtime_label(cls, value: str) -> str:
+        if not value or not value.isprintable():
+            raise ValueError("runtime labels must be nonempty printable strings")
+        return value
+
+    @model_validator(mode="after")
+    def _check_packages(self) -> ProvenanceRealizedEnvironment:
+        """Require the producer's canonical package ordering and conflict map."""
+        parsed: dict[str, set[str]] = {}
+        for item in self.packages:
+            if not item.isprintable() or "==" not in item:
+                raise ValueError(f"invalid realized package pin: {item!r}")
+            name, version = item.split("==", 1)
+            if not _PACKAGE_NAME.fullmatch(name) or not version:
+                raise ValueError(f"invalid realized package pin: {item!r}")
+            parsed.setdefault(name, set()).add(version)
+        expected_packages = [
+            f"{name}=={version}"
+            for name, version in sorted(
+                (name, version)
+                for name, versions in parsed.items()
+                for version in versions
+            )
+        ]
+        if self.packages != expected_packages:
+            raise ValueError("realized packages must be sorted and duplicate-free")
+
+        expected_conflicts = {
+            name: sorted(versions)
+            for name, versions in sorted(parsed.items())
+            if len(versions) > 1
+        }
+        if self.package_conflicts != expected_conflicts:
+            raise ValueError(
+                "package_conflicts must exactly describe names with multiple "
+                "realized versions"
+            )
+        for name in self.direct_url_sources:
+            if not _PACKAGE_NAME.fullmatch(name) or name not in parsed:
+                raise ValueError(
+                    f"direct-URL source {name!r} is not a realized package"
+                )
+        return self
+
+
+class ProvenanceActiveContainer(BaseModel):
+    """Content identity of the container that actually executed the DAG."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    path: str
+    sha256: str
+
+    _check_sha256 = field_validator("sha256")(_validate_sha256)
+
+    @field_validator("path")
+    @classmethod
+    def _check_path(cls, value: str) -> str:
+        if not value or not value.isprintable():
+            raise ValueError("active-container path must be nonempty and printable")
+        return value
+
+
+class ProvenanceEnvironment(BaseModel):
+    """Realized execution identity plus declared environment intentions."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    realized: ProvenanceRealizedEnvironment
+    active_container: ProvenanceActiveContainer | None
+    declared: dict[str, str] = Field(min_length=1)
+
+    @field_validator("declared")
+    @classmethod
+    def _check_declared(cls, value: dict[str, str]) -> dict[str, str]:
+        return _validate_sha256_map(value, label="declared environment")
+
+
+class ProvenanceManifest(BaseModel):
+    """Complete, self-consistent manifest accepted for immutable registration."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    artifact_id: str
+    execution_id: str
+    inputs: dict[str, str] = Field(min_length=1)
+    sources: dict[str, str] = Field(min_length=1)
+    artifacts: dict[str, str] = Field(min_length=1)
+    code: dict[str, str] = Field(min_length=1)
+    git: ProvenanceGitIdentity
+    environment: ProvenanceEnvironment
+    resolved_config: dict[str, Any] = Field(min_length=1)
+    source_date_epoch: str | None
+
+    _check_artifact_id = field_validator("artifact_id")(_validate_content_id)
+    _check_execution_id = field_validator("execution_id")(_validate_content_id)
+
+    @field_validator("inputs", "sources", "artifacts", "code")
+    @classmethod
+    def _check_hash_map(cls, value: dict[str, str]) -> dict[str, str]:
+        return _validate_sha256_map(value, label="provenance")
+
+    @model_validator(mode="after")
+    def _check_manifest_consistency(self) -> ProvenanceManifest:
+        """Rebuild role partitions and both identities exactly as the producer."""
+        expected_artifacts = {
+            path: digest
+            for path, digest in self.inputs.items()
+            if path.startswith(_GENERATED_INPUT_PREFIXES)
+        }
+        expected_sources = {
+            path: digest
+            for path, digest in self.inputs.items()
+            if path not in expected_artifacts
+        }
+        if self.sources != expected_sources or self.artifacts != expected_artifacts:
+            raise ValueError(
+                "sources and artifacts must be the producer-defined exact "
+                "partition of inputs"
+            )
+
+        required_inputs = {"conf/catalog.yaml", "results/resolved_config.yaml"}
+        missing = sorted(required_inputs - self.inputs.keys())
+        if missing:
+            raise ValueError(f"provenance inputs omit required files: {missing}")
+
+        raw_payloads = {
+            path
+            for path in self.inputs
+            if path.startswith("data/raw/")
+            and not PurePosixPath(path).name.startswith(".git")
+            and PurePosixPath(path).name not in {".dvcignore", "dvc.lock", "dvc.yaml"}
+            and not path.endswith(".dvc")
+        }
+        missing_dvc_metadata: dict[str, list[str]] = {}
+        for path in sorted(raw_payloads):
+            raw = PurePosixPath(path)
+            required_metadata = {
+                f"{path}.dvc",
+                f"{raw.parent.as_posix()}/.gitignore",
+            }
+            absent = sorted(required_metadata - self.inputs.keys())
+            if absent:
+                missing_dvc_metadata[path] = absent
+        if missing_dvc_metadata:
+            raise ValueError(
+                "real raw provenance inputs require adjacent DVC pointer and "
+                f"ignore metadata in inputs: {missing_dvc_metadata}"
+            )
+
+        roles = {
+            "inputs": set(self.inputs),
+            "code": set(self.code),
+            "environment.declared": set(self.environment.declared),
+        }
+        role_names = list(roles)
+        for index, left in enumerate(role_names):
+            for right in role_names[index + 1 :]:
+                overlap = sorted(roles[left] & roles[right])
+                if overlap:
+                    raise ValueError(
+                        f"provenance file roles {left} and {right} overlap: {overlap}"
+                    )
+
+        artifact_payload = {
+            "config": self.resolved_config,
+            "inputs": self.inputs,
+            "code": self.code,
+        }
+        expected_artifact_id = hashlib.sha256(
+            json.dumps(artifact_payload, sort_keys=True).encode()
+        ).hexdigest()[:12]
+        if self.artifact_id != expected_artifact_id:
+            raise ValueError(
+                f"artifact_id does not match manifest content; expected "
+                f"{expected_artifact_id}"
+            )
+
+        execution_payload = {
+            "artifact_id": self.artifact_id,
+            "realized_environment": self.environment.realized.model_dump(mode="json"),
+            "container_sha256": (
+                self.environment.active_container.sha256
+                if self.environment.active_container is not None
+                else None
+            ),
+        }
+        expected_execution_id = hashlib.sha256(
+            json.dumps(execution_payload, sort_keys=True).encode()
+        ).hexdigest()[:12]
+        if self.execution_id != expected_execution_id:
+            raise ValueError(
+                f"execution_id does not match manifest content; expected "
+                f"{expected_execution_id}"
+            )
+        return self
+
+
+class DeliveryFile(BaseModel):
+    """One exact file frozen into a reporting delivery."""
+
+    model_config = ConfigDict(extra="forbid")
+    role: Literal["payload", "figure"]
+    source: str
+    delivered: str
+    sha256: str
+    bytes: int = Field(ge=0)
+    storage: Literal["git", "dvc"]
+    dvc_pointer: str | None
+
+    _check_sha256 = field_validator("sha256")(_validate_sha256)
+
+    @field_validator("source", "delivered", "dvc_pointer")
+    @classmethod
+    def _check_relative_path(cls, value: str | None) -> str | None:
+        """Delivery paths must stay relative and traversal-free."""
+        if value is None:
+            return value
+        path = Path(value)
+        if not value or path.is_absolute() or ".." in path.parts:
+            raise ValueError(f"unsafe delivery path: {value!r}")
+        return value
+
+    @model_validator(mode="after")
+    def _check_storage_pointer(self) -> DeliveryFile:
+        """DVC files require a pointer; direct-Git files must not claim one."""
+        if self.storage == "dvc" and self.dvc_pointer is None:
+            raise ValueError("DVC delivery file is missing dvc_pointer")
+        if self.storage == "git" and self.dvc_pointer is not None:
+            raise ValueError("direct-Git delivery file cannot have dvc_pointer")
+        if self.storage == "git" and self.bytes > 1 << 20:
+            raise ValueError("direct-Git delivery files must be <= 1 MiB")
+        return self
+
+
+class DeliveryGitIdentity(BaseModel):
+    """Git state of both the registered run and the delivery operation."""
+
+    model_config = ConfigDict(extra="forbid")
+    run_rev: str | None
+    run_dirty: bool | Literal["unknown"]
+    delivery_rev: str | None
+    delivery_dirty: bool | Literal["unknown"]
+
+
+class DeliveryDVCIdentity(BaseModel):
+    """Content identity of every DVC pointer/lock file at delivery time."""
+
+    model_config = ConfigDict(extra="forbid")
+    identity_sha256: str
+    pointer_files: dict[str, str]
+
+    _check_identity_sha256 = field_validator("identity_sha256")(_validate_sha256)
+
+    @field_validator("pointer_files")
+    @classmethod
+    def _check_pointer_hashes(cls, value: dict[str, str]) -> dict[str, str]:
+        """Validate every recorded DVC pointer/lock-file digest."""
+        for path, digest in value.items():
+            if not path or Path(path).is_absolute() or ".." in Path(path).parts:
+                raise ValueError(f"unsafe DVC pointer path: {path!r}")
+            _validate_sha256(digest)
+        return value
+
+
+class DeliveryManifest(BaseModel):
+    """Validated immutable record for one reporting delivery."""
+
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal[1]
+    delivery_id: str
+    created_utc: str
+    artifact_type: Literal["papers", "posters", "presentations", "writeups"]
+    artifact: str
+    milestone: str
+    execution_id: str
+    artifact_id: str
+    provenance_archive: str
+    provenance_sha256: str
+    git: DeliveryGitIdentity
+    dvc: DeliveryDVCIdentity
+    files: list[DeliveryFile] = Field(min_length=1)
+
+    _check_execution_id = field_validator("execution_id")(_validate_content_id)
+    _check_artifact_id = field_validator("artifact_id")(_validate_content_id)
+    _check_provenance_sha256 = field_validator("provenance_sha256")(_validate_sha256)
+    _check_artifact = field_validator("artifact")(_validate_safe_id)
+    _check_milestone = field_validator("milestone")(_validate_safe_id)
+
+    @field_validator("delivery_id")
+    @classmethod
+    def _check_delivery_id(cls, value: str) -> str:
+        """Require ``YYYY-MM-DD-<safe milestone>`` delivery naming."""
+        if not _DELIVERY_ID.fullmatch(value) or ".." in value:
+            raise ValueError("must be YYYY-MM-DD-<safe milestone>")
+        try:
+            dt.date.fromisoformat(value[:10])
+        except ValueError as exc:
+            raise ValueError("delivery date must be a real calendar date") from exc
+        return value
+
+    @model_validator(mode="after")
+    def _check_delivery_consistency(self) -> DeliveryManifest:
+        """Cross-check IDs, paths, roles, and DVC pointers before publication."""
+        if self.delivery_id != f"{self.delivery_id[:10]}-{self.milestone}":
+            raise ValueError("delivery_id milestone disagrees with milestone field")
+        expected_archive = f"metadata/provenance/{self.execution_id}.json"
+        if self.provenance_archive != expected_archive:
+            raise ValueError(
+                f"provenance_archive must be {expected_archive!r} for this execution"
+            )
+        delivered = [
+            unicodedata.normalize("NFC", item.delivered).casefold()
+            for item in self.files
+        ]
+        if len(delivered) != len(set(delivered)):
+            raise ValueError("delivery contains portable-colliding delivered paths")
+        if not any(item.role == "payload" for item in self.files):
+            raise ValueError("delivery must contain at least one payload")
+        delivery_root = (
+            f"reporting/{self.artifact_type}/{self.artifact}/deliveries/"
+            f"{self.delivery_id}"
+        )
+        for item in self.files:
+            if item.storage != "dvc":
+                continue
+            pointer = f"{delivery_root}/{item.dvc_pointer}"
+            if pointer not in self.dvc.pointer_files:
+                raise ValueError(f"DVC pointer is absent from DVC identity: {pointer}")
+        return self

@@ -10,13 +10,14 @@ CAT = {
     "datasets": {
         "samples": {"path": "s.csv", "format": "csv"},
         "table": {"path": "t.parquet", "format": "parquet"},
+        "provenance": {"path": "results/provenance.json", "format": "json"},
     }
 }
 
 
 def test_load_catalog_ok() -> None:
     cat = catalog.Catalog(**CAT)
-    assert set(cat.datasets) == {"samples", "table"}
+    assert set(cat.datasets) == {"samples", "table", "provenance"}
 
 
 def test_dataset_path_by_name() -> None:
@@ -37,9 +38,129 @@ def test_unsupported_format_fails_loud(tmp_path: Path) -> None:
         catalog.load_catalog(p)
 
 
-def test_load_dataset_csv(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "body",
+    [
+        (
+            "datasets:\n"
+            "  provenance:\n"
+            "    path: results/provenance.json\n"
+            "    format: json\n"
+            "datasets: {}\n"
+        ),
+        (
+            "datasets:\n"
+            "  provenance:\n"
+            "    path: results/provenance.json\n"
+            "    format: json\n"
+            "  provenance:\n"
+            "    path: results/other.json\n"
+            "    format: json\n"
+        ),
+        (
+            "datasets:\n"
+            "  provenance:\n"
+            "    path: results/provenance.json\n"
+            "    path: results/other.json\n"
+            "    format: json\n"
+        ),
+    ],
+)
+def test_duplicate_yaml_keys_fail_loud(tmp_path: Path, body: str) -> None:
+    p = tmp_path / "catalog.yaml"
+    p.write_text(body)
+    with pytest.raises(ValueError, match="duplicate key"):
+        catalog.load_catalog(p)
+
+
+def test_load_dataset_csv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     csv = tmp_path / "s.csv"
     csv.write_text("a,b\n1,2\n")
-    cat = catalog.Catalog(datasets={"s": {"path": str(csv), "format": "csv"}})
+    cat = catalog.Catalog(
+        datasets={
+            "s": {"path": "s.csv", "format": "csv"},
+            "provenance": {"path": "results/provenance.json", "format": "json"},
+        }
+    )
+    monkeypatch.chdir(tmp_path)
     frame = catalog.load_dataset("s", cat)
     assert list(frame.columns) == ["a", "b"]
+
+
+@pytest.mark.parametrize(
+    ("name", "path", "format", "message"),
+    [
+        ("provenance", "results/other.json", "json", "provenance must bind exactly"),
+        (
+            "provenance",
+            "results/provenance.json",
+            "yaml",
+            "provenance must bind exactly",
+        ),
+        ("measurements", "results/tables/m.parquet", "parquet", "data/processed"),
+        (
+            "measurements",
+            "data/processed/nested/m.parquet",
+            "parquet",
+            "direct file below data/processed",
+        ),
+        ("measurements", "data/processed/m.csv", "csv", "format must be parquet"),
+        (
+            "measurements",
+            "data/processed/README.md",
+            "parquet",
+            "safe path components.*parquet filename",
+        ),
+        (
+            "measurements",
+            "data/processed/.hidden.parquet",
+            "parquet",
+            "safe path components.*parquet filename",
+        ),
+        ("qc_summary", "data/processed/qc.csv", "csv", "results/qc"),
+        ("qc_summary", "results/qc/qc.json", "json", "format must be csv"),
+        (
+            "qc_summary",
+            "results/qc/.gitignore",
+            "csv",
+            "safe path components.*csv filename",
+        ),
+    ],
+)
+def test_known_pipeline_bindings_enforce_output_contract(
+    name: str, path: str, format: str, message: str
+) -> None:
+    datasets = {
+        "provenance": {"path": "results/provenance.json", "format": "json"},
+        name: {"path": path, "format": format},
+    }
+    with pytest.raises(ValueError, match=message):
+        catalog.Catalog(datasets=datasets)
+
+
+def test_catalog_bindings_drive_dag_paths() -> None:
+    """Snakemake resolves catalog keys instead of repeating their paths."""
+    project_catalog = catalog.load_catalog()
+    provenance = catalog.dataset_path("provenance", project_catalog)
+    provenance_rule = Path("workflow/rules/provenance.smk").read_text()
+    snakefile = Path("Snakefile").read_text()
+    assert provenance == Path("results/provenance.json")
+    assert '_catalog_dataset_path("provenance"' in provenance_rule
+    assert "prov=_PROVENANCE_PATH" in provenance_rule
+    assert "_PROVENANCE_PATH" in snakefile
+    assert f'prov="{provenance.as_posix()}"' not in provenance_rule
+{%- if include_example %}
+    measurements = catalog.dataset_path("measurements", project_catalog)
+    qc_summary = catalog.dataset_path("qc_summary", project_catalog)
+    example_rule = Path("workflow/rules/example.smk").read_text()
+    assert measurements == Path("data/processed/measurements.parquet")
+    assert qc_summary == Path("results/qc/qc_summary.csv")
+    assert '_MEASUREMENTS_PATH = str(dataset_path("measurements"' in example_rule
+    assert '_QC_SUMMARY_PATH = str(dataset_path("qc_summary"' in example_rule
+    assert "table=_MEASUREMENTS_PATH" in example_rule
+    assert "qc_summary=_QC_SUMMARY_PATH" in example_rule
+    assert "table=_MEASUREMENTS_PATH" in provenance_rule
+    assert "qc_summary=_QC_SUMMARY_PATH" in provenance_rule
+    assert f'table="{measurements.as_posix()}"' not in example_rule
+    assert f'qc_summary="{qc_summary.as_posix()}"' not in example_rule
+{%- endif %}

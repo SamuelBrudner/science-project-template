@@ -52,6 +52,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
+    "import os\n",
     "import tempfile\n",
     "from pathlib import Path\n",
     "\n",
@@ -59,9 +60,18 @@
     "\n",
     "tmp = Path(tempfile.mkdtemp())\n",
     "(tmp / \"s.csv\").write_text(\"id,signal\\n1,0.5\\n2,0.7\\n\")\n",
-    "cat = catalog.Catalog(datasets={\"samples\": {\"path\": str(tmp / \"s.csv\"), \"format\": \"csv\"}})\n",
-    "print(\"samples ->\", catalog.dataset_path(\"samples\", cat))\n",
-    "catalog.load_dataset(\"samples\", cat)"
+    "cat = catalog.Catalog(datasets={\n",
+    "    \"samples\": {\"path\": \"s.csv\", \"format\": \"csv\"},\n",
+    "    \"provenance\": {\"path\": \"results/provenance.json\", \"format\": \"json\"},\n",
+    "})\n",
+    "original = Path.cwd()\n",
+    "try:\n",
+    "    os.chdir(tmp)\n",
+    "    print(\"samples ->\", catalog.dataset_path(\"samples\", cat))\n",
+    "    frame = catalog.load_dataset(\"samples\", cat)\n",
+    "finally:\n",
+    "    os.chdir(original)\n",
+    "frame"
    ]
   }
  ],

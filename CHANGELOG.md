@@ -1,7 +1,63 @@
 # Changelog
 
 All notable changes to this Copier template are documented here. This is the
-template's own changelog; generated projects keep their own (via `cz bump`).
+template's own changelog; generated projects manage their own versions with
+`cz bump`.
+
+## v0.2.0 — Explicit repository contract
+
+This release turns repository placement from convention into a tested contract.
+It is designed as a migration-safe update for projects created from `v0.1.0`.
+
+Highlights:
+
+- Makes the generated root `README.md` the canonical, machine-checked map for
+  source, data, metadata, results, reporting, lab records, notes, configuration,
+  and temporary artifacts.
+- Makes placement part of correctness: root agent instructions prohibit marking
+  work complete while new or generated files are misplaced, duplicated, or
+  governed by the wrong Git/DVC/ignore policy.
+- Defines additive instruction inheritance. Nested `AGENTS.md` files narrow their
+  scope; they do not silently replace root invariants. A Copier-preserved
+  `AGENTS.local.md` provides project-specific rules without merge churn.
+- Separates reusable analysis-ready data (`data/processed/`) from terminal review
+  outputs (`results/`), and gives QC, figures, tables, logs, and provenance
+  explicit homes.
+- Clarifies configuration ownership across `conf/config.yaml`,
+  `conf/catalog.yaml`, `workflow/config.yaml`, and executor profiles.
+- Keeps the pipeline-generated current provenance at
+  `results/provenance.json`; deliberate run registration archives an immutable
+  copy under `metadata/provenance/` and appends the human-owned run ledger
+  atomically and idempotently.
+- Defines Lab Tracker as the reasoning graph rather than an ELN, object store, or
+  data-versioning system, and adds an explicit choice for ELN-backed versus
+  repository-backed bench records.
+- Generalizes frozen reporting snapshots to immutable dated deliveries with a
+  validated manifest and content hashes while retaining legacy paper
+  `submissions/` directories during updates.
+- Adds exhaustive documentation-contract renders, path/link/ignore checks,
+  concurrency and conflict tests for run registration, and a genuine
+  `v0.1.0`-to-`v0.2.0` Copier update test that preserves accumulated records.
+
+### Updating from v0.1.0
+
+Run `copier update --trust` from a clean project branch and review the merge.
+Copier preserves `AGENTS.local.md`, `metadata/runs.csv`,
+`reporting/writeups/LAB_NOTEBOOK.md`, existing decision notes, and legacy
+reporting submissions and deliveries. The update does not silently relocate or
+delete existing user artifacts; use the new placement matrix to migrate them
+deliberately.
+
+The bundled example now writes:
+
+- `results/tables/measurements.parquet` →
+  `data/processed/measurements.parquet`
+- `results/excluded_samples.json` →
+  `results/qc/excluded_samples.json`
+
+Copier does not delete the old ignored outputs. Regenerate the example at the
+new paths, verify the replacement artifacts, and only then remove stale old
+files deliberately; no user data or result is moved automatically.
 
 ## v0.1.0 — Initial public release
 

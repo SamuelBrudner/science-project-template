@@ -31,8 +31,67 @@ def test_schema_keeps_string_id() -> None:
     sys.path.insert(0, os.getcwd())  # top-level `metadata` package
     from metadata.schemas import SampleRecord
 
-    rec = SampleRecord(sample_id="001", condition="control", file="data/001.csv")
+    rec = SampleRecord(
+        sample_id="001", condition="control", file="tests/fixtures/raw/001.csv"
+    )
     assert rec.sample_id == "001"
+
+
+def _valid_app_config() -> dict:
+    """Return the rendered preset's smallest valid scientific configuration."""
+    return {
+        "seed": 7,{% if include_example %}
+        "example": {
+            "value_col": "signal",
+            "group_col": "condition",
+            "units": "a.u.",
+        },
+        "qc": {"min_n": 3, "min_samples_per_condition": 2},{% endif %}
+    }
+
+
+@pytest.mark.parametrize("bad_seed", [True, False, -1, 1.0, "1"])
+def test_app_config_rejects_coerced_or_invalid_seeds(bad_seed: object) -> None:
+    """Scientific identity never changes through silent type coercion."""
+    sys.path.insert(0, os.getcwd())
+    from pydantic import ValidationError
+
+    from metadata.schemas import AppConfig
+
+    payload = _valid_app_config()
+    payload["seed"] = bad_seed
+    with pytest.raises(ValidationError):
+        AppConfig(**payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_value"),
+    [
+        ("min_n", True),
+        ("min_n", 0),
+        ("min_n", -1),
+        ("min_n", 1.0),
+        ("min_n", "1"),
+        ("min_samples_per_condition", True),
+        ("min_samples_per_condition", 0),
+        ("min_samples_per_condition", -1),
+        ("min_samples_per_condition", 1.0),
+        ("min_samples_per_condition", "1"),
+    ],
+)
+def test_app_config_rejects_coerced_or_nonpositive_qc_thresholds(
+    field: str, bad_value: object
+) -> None:
+    """QC replicate thresholds are strict positive integers."""
+    sys.path.insert(0, os.getcwd())
+    from pydantic import ValidationError
+
+    from metadata.schemas import QCCfg
+
+    payload = {"min_n": 3, "min_samples_per_condition": 2}
+    payload[field] = bad_value
+    with pytest.raises(ValidationError):
+        QCCfg(**payload)
 
 
 def test_qc_summary_id_stays_string(tmp_path: Path) -> None:
@@ -61,4 +120,78 @@ def test_schema_rejects_unsafe_ids(bad: str) -> None:
     from metadata.schemas import SampleRecord
 
     with pytest.raises(ValidationError):
-        SampleRecord(sample_id=bad, condition="c", file="f.csv")
+        SampleRecord(sample_id=bad, condition="c", file="tests/fixtures/raw/sample.csv")
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "data/raw/sample.csv",
+        "data/raw/cohort/sample.csv",
+        "tests/fixtures/raw/sample.csv",
+        "tests/fixtures/raw/cohort/sample.csv",
+    ],
+)
+def test_schema_accepts_canonical_sample_file_paths(path: str) -> None:
+    sys.path.insert(0, os.getcwd())
+    from metadata.schemas import SampleRecord
+
+    assert SampleRecord(sample_id="s1", condition="c", file=path).file == path
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/tmp/outside.csv",
+        "../outside.csv",
+        "data/processed/outside.csv",
+        "data/raw/../processed/outside.csv",
+        "tests/fixtures/outside.csv",
+        "data/raw",
+        "tests/fixtures/raw",
+        r"C:\outside.csv",
+        r"data\raw\outside.csv",
+        "data/raw/outside.csv\n",
+        "",
+    ],
+)
+def test_schema_rejects_noncanonical_sample_file_paths(path: str) -> None:
+    sys.path.insert(0, os.getcwd())
+    from pydantic import ValidationError
+
+    from metadata.schemas import SampleRecord
+
+    with pytest.raises(ValidationError, match="sample file path"):
+        SampleRecord(sample_id="s1", condition="c", file=path)
+
+
+@pytest.mark.parametrize(
+    "path", ["metadata/samples.csv", "metadata/cohort/samples.csv"]
+)
+def test_sample_manifest_path_stays_under_metadata(path: str) -> None:
+    sys.path.insert(0, os.getcwd())
+    from metadata.schemas import validate_sample_manifest_path
+
+    assert validate_sample_manifest_path(path) == path
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/tmp/samples.csv",
+        "../metadata/samples.csv",
+        "metadata/../samples.csv",
+        "conf/samples.csv",
+        "metadata",
+        r"C:\metadata\samples.csv",
+        r"metadata\samples.csv",
+        "metadata/samples.csv\n",
+        "",
+    ],
+)
+def test_sample_manifest_path_rejects_noncanonical_locations(path: str) -> None:
+    sys.path.insert(0, os.getcwd())
+    from metadata.schemas import validate_sample_manifest_path
+
+    with pytest.raises(ValueError, match="sample manifest path"):
+        validate_sample_manifest_path(path)

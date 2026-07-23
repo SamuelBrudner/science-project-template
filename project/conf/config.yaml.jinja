@@ -4,7 +4,7 @@
 defaults:
   - _self_
 
-seed: 20260101
+seed: 20260101{% if include_example %}
 
 # Example analysis parameters (delete with the example stage).
 example:
@@ -15,4 +15,4 @@ example:
 # QC thresholds.
 qc:
   min_n: 3                      # a sample passes if it has >= min_n non-missing measurements
-  min_samples_per_condition: 2  # each condition needs >= this many PASSING samples, else fail
+  min_samples_per_condition: 2  # each condition needs >= this many PASSING samples, else fail{% endif %}

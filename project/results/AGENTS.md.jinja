@@ -1,0 +1,17 @@
+# AGENTS.md — `results/`
+
+Root [`../AGENTS.md`](../AGENTS.md) applies. All payloads here are pipeline-owned
+and must match the root [`README.md`](../README.md) contract.
+
+- Never hand-edit a result, even for a cosmetic fix. Change code/config and
+  rebuild the declared target.
+- Do not commit generated results regardless of size. A delivery freezes exact
+  outputs under `reporting/` with provenance; it does not make `results/` source.
+- Write only declared outputs. QC goes to `results/qc/`, data-derived figures to
+  `results/figures/`, terminal report tables to `results/tables/`, and declared
+  execution logs to `results/logs/`.
+- Reusable downstream datasets belong in `data/processed/`.
+- Agents may run the pipeline and produce `results/provenance.json`. They may not
+  register/archive the run without explicit user approval.
+- Before completion, confirm generated files are ignored and no result payload
+  is staged in Git.

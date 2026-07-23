@@ -46,21 +46,31 @@ print(theming.render_mplstyle(theme, "light").splitlines()[0])
 
 ## Load data by name (the catalog)
 
-Datasets are named once in `conf/catalog.yaml`, so code loads them by name — e.g.
-`load_dataset("measurements")` — instead of hard-coding paths and formats. Here is
-the API on a self-contained example:
+Datasets are named once in `conf/catalog.yaml`, so code loads a logical key
+instead of hard-coding paths and formats. Here is the API on a self-contained
+example:
 
 ```{code-cell} ipython3
 import tempfile
+import os
 from pathlib import Path
 
 from {{ package_name }} import catalog
 
 tmp = Path(tempfile.mkdtemp())
 (tmp / "s.csv").write_text("id,signal\n1,0.5\n2,0.7\n")
-cat = catalog.Catalog(datasets={"samples": {"path": str(tmp / "s.csv"), "format": "csv"}})
-print("samples ->", catalog.dataset_path("samples", cat))
-catalog.load_dataset("samples", cat)
+cat = catalog.Catalog(datasets={
+    "samples": {"path": "s.csv", "format": "csv"},
+    "provenance": {"path": "results/provenance.json", "format": "json"},
+})
+original = Path.cwd()
+try:
+    os.chdir(tmp)
+    print("samples ->", catalog.dataset_path("samples", cat))
+    frame = catalog.load_dataset("samples", cat)
+finally:
+    os.chdir(original)
+frame
 ```
 
 ## A themed figure

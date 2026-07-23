@@ -1,36 +1,36 @@
-# `exploratory/` — Scratch notebooks (disposable)
+# `exploratory/` — Disposable exploration
 
-Two very different jobs get called "notebooks"; this directory holds only the
-**first** kind:
+## Authority
 
-- **Scratch / exploration (HERE).** Looking at data, trying an idea. Disposable,
-  read by no one later, held to no lint or reproducibility standard. Nothing here
-  is load-bearing.
-- **Narrative / tutorial (NOT here → `docs/`).** A curated explanation meant to be
-  *read and kept true* — the tutorial that walks through the library/pipeline. That
-  lives in `docs/` and is **executed on every docs build**, so it can't silently
-  drift from the code. See `docs/tutorial.{% if docs_backend == "sphinx" %}md{% else %}ipynb{% endif %}`.
+The root [`README.md`](../README.md) contract defines this as non-load-bearing
+scratch. Local [`AGENTS.md`](AGENTS.md) governs promotion and cleanup.
 
-The deciding question: **is this notebook disposable, or is it kept and read?**
-Disposable → here. Kept-and-read → `docs/`. Anything that starts producing a real
-figure/table/number **moves into `src/`** (a tested function) called by a
-`workflow/` rule — never regenerated from a notebook.
+Use this directory to inspect data, test an idea, or sketch an analysis before
+its contract is known. Nothing in `workflow/`, `src/`, reporting, metadata, or a
+scientific claim may depend on a file here. Do not treat notebook state or stored
+output as evidence.
 
-## Tool: {{ notebook_tool }}
+An exploration has three possible endings:
+
+1. **Discard it** when it teaches nothing durable.
+2. **Record a human-accepted decision** in Lab Tracker{% if not use_lab_tracker %}
+   or `notes/decisions/`{% endif %}, without promoting scratch code.
+3. **Promote load-bearing work** into a tested `src/` function, declared
+   `workflow/` stage, canonical data/result target, QC, and provenance. The
+   notebook becomes a disposable caller, not a dependency.
+
+Curated narrative meant to stay true belongs in `docs/` and is executed during
+the docs build.
+
+## Configured tool: {{ notebook_tool }}
+
 {% if notebook_tool == "marimo" -%}
-This project uses **marimo**: notebooks are **pure `.py`** — git-diffable, no
-stored outputs, reactive (no stale hidden state), runnable as scripts. Far more
-reproducible than JSON notebooks (~36% of Jupyter notebooks don't re-run). Edit:
+Marimo notebooks are pure `.py`, reactive, and source-diffable. Start with
 `marimo edit exploratory/example_marimo.py`.
 {% elif notebook_tool == "jupyter" -%}
-This project uses **Jupyter**. The `nbstripout` pre-commit hook strips outputs
-before every commit (clean diffs; no data/credentials leak into git) — **keep it
-installed.** Launch: `jupyter lab`. Consider marimo for new projects: pure-`.py`
-notebooks avoid the out-of-order / hidden-state problems that make `.ipynb`
-unreproducible.
+Jupyter outputs are stripped by pre-commit. Launch with `jupyter lab`; never
+commit cell output, embedded data, or credentials.
 {% else -%}
-No exploration tool configured. Re-run `copier update` with a different
-`notebook_tool`, or install marimo / Jupyter yourself.
-{% endif %}
-Everything in `exploratory/` is excluded from ruff/black — exploration is not held
-to library lint standards.
+No exploration notebook tool is configured. Plain scratch files remain subject
+to the same disposable, non-load-bearing contract.
+{% endif -%}

@@ -1,0 +1,64 @@
+# Reporting delivery contract
+
+A delivery is the immutable record of exactly what left the repository: a
+submitted manuscript, printer PDF, presented deck, or distributed report. The
+same lifecycle applies to every reporting type.
+
+## Canonical path
+
+```
+reporting/<type>/<artifact>/deliveries/<YYYY-MM-DD>-<milestone>/
+├── delivery.yaml
+├── payload/                  # exact delivered payload(s)
+└── figures/                  # exact figure bytes used, when applicable
+```
+
+`<type>` is `papers`, `posters`, `presentations`, or `writeups`. The milestone
+is a short stable label such as `submitted-v1`, `printer-final`,
+`lab-meeting`, or `funder-report`.
+
+Create it only after explicit human approval:
+
+```bash
+python scripts/freeze_delivery.py \
+  --type papers \
+  --artifact <artifact-slug> \
+  --milestone <milestone-slug> \
+  --payload <built-file> \
+  --figure <figure-file>
+```
+
+Repeat `--payload` and `--figure` as needed. `--type` accepts `papers`,
+`posters`, `presentations`, or `writeups`; `--execution-id` selects a specific
+registered execution and `--date YYYY-MM-DD` selects an explicit delivery date.
+Without `--execution-id`, the command reads the current provenance ID, which
+must already be registered.
+
+## Required manifest facts
+
+`delivery.yaml` is generated and validated with the delivery. It records:
+
+- artifact type/name, delivery date, and milestone;
+- run-time and delivery-time Git revision/dirty-state identity;
+- a canonical identity hash plus SHA-256 map for the DVC pointer/lock files;
+- registered execution ID and artifact ID;
+- the repository source path of each supplied payload and figure; and
+- byte size and SHA-256 for every frozen payload and figure.
+
+The execution ID must have exactly one `metadata/runs.csv` row, and the matching
+`metadata/provenance/<execution_id>.json` must exist and agree with the IDs.
+Missing, duplicate, or ambiguous identity is an error, not a field to guess.
+
+## Immutability and storage
+
+The command stages and installs the delivery atomically, refuses an existing
+destination, validates the manifest, and makes the frozen contents read-only.
+Do not edit its manifest, payload, or figures afterward. A correction is a new
+dated milestone that can point back to the previous one.
+
+Commit text, manifests, and files up to 1 MiB to Git. Put larger binaries under
+{{ data_versioning }} at the same logical delivery path and commit the pointer.
+The manifest hashes the delivered payload bytes, not merely the pointer.
+
+Legacy `papers/*/submissions/` directories remain valid immutable records after
+a template update. Preserve them in place; use `deliveries/` for new freezes.

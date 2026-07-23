@@ -6,16 +6,40 @@ testable in isolation. Delete with the example stage.
 
 from __future__ import annotations
 
+import math
+
+import numpy as np
 import pandas as pd
 
 
-def summarize_sample(values: pd.Series, min_n: int) -> dict[str, float | int | bool]:
+def finite_measurements(values: pd.Series) -> pd.Series:
+    """Return numeric finite measurements; reject non-numeric scientific input."""
+    numeric = pd.to_numeric(values, errors="raise")
+    array = numeric.to_numpy(dtype=float, na_value=np.nan)
+    return pd.Series(array[np.isfinite(array)], dtype=float)
+
+
+def normalize_qc_metric_columns(qc: pd.DataFrame) -> pd.DataFrame:
+    """Parse QC CSV metrics while preserving nullable mean/SD as numeric NaN."""
+    normalized = qc.copy()
+    for column in ("n", "n_missing"):
+        normalized[column] = pd.to_numeric(normalized[column], errors="raise")
+    for column in ("mean", "sd"):
+        nullable = normalized[column].replace("", np.nan)
+        normalized[column] = pd.to_numeric(nullable, errors="raise")
+    return normalized
+
+
+def summarize_sample(
+    values: pd.Series, min_n: int
+) -> dict[str, float | int | bool | None]:
     """Per-sample QC metrics and a pass/fail flag.
 
     Parameters
     ----------
     values:
-        The sample's measurements (may contain NaN).
+        The sample's measurements. NaN and positive/negative infinity are counted
+        as invalid/missing; non-numeric values fail loud.
     min_n:
         Minimum non-missing measurements for the sample to pass.
 
@@ -24,13 +48,22 @@ def summarize_sample(values: pd.Series, min_n: int) -> dict[str, float | int | b
     dict
         Keys ``n``, ``n_missing``, ``mean``, ``sd``, ``qc_pass``.
     """
-    n = int(values.notna().sum())
-    n_missing = int(values.isna().sum())
+    if isinstance(min_n, bool) or not isinstance(min_n, int) or min_n < 1:
+        raise ValueError("min_n must be a positive integer")
+    finite = finite_measurements(values)
+    n = len(finite)
+    n_missing = len(values) - n
+    mean = float(finite.mean()) if n else None
+    sd = float(finite.std(ddof=1)) if n >= 2 else None
+    if mean is not None and not math.isfinite(mean):
+        raise ValueError("finite measurements produced a non-finite mean")
+    if sd is not None and not math.isfinite(sd):
+        raise ValueError("finite measurements produced a non-finite sample SD")
     return {
         "n": n,
         "n_missing": n_missing,
-        "mean": float(values.mean()),
-        "sd": float(values.std(ddof=1)),
+        "mean": mean,
+        "sd": sd,
         "qc_pass": bool(n >= min_n and n_missing == 0),
     }
 

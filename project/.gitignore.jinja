@@ -20,12 +20,17 @@ _wheel/
 .snakemake/
 
 # --- Data (versioned by {{ data_versioning }}, not git) ---
-data/raw/*
-data/interim/*
-data/processed/*
+data/raw/**
+data/interim/**
+data/processed/**
+# Re-include directories so nested DVC pointers/ignore files can be tracked.
+!data/**/
 {%- if data_versioning == "dvc" %}
-# keep DVC pointer files and the .gitkeep/READMEs
-!data/**/*.dvc
+# keep DVC pointer files and DVC-generated ignore rules
+!data/raw/**/*.dvc
+!data/processed/**/*.dvc
+!data/raw/**/.gitignore
+!data/processed/**/.gitignore
 {%- endif %}
 !data/**/README.md
 !data/**/.gitkeep
@@ -35,6 +40,7 @@ data/processed/*
 results/**
 !results/**/
 !results/**/README.md
+!results/**/AGENTS.md
 !results/**/.gitkeep
 
 # --- Generated theme artifacts (rendered from conf/theme by the pipeline) ---
@@ -48,13 +54,19 @@ reporting/**/*.aux
 reporting/**/*.log
 reporting/**/*.out
 reporting/**/*.pdf
-!reporting/**/submissions/**/*.pdf   # frozen snapshots are kept
+# Frozen legacy submissions and v0.2+ deliveries are kept.
+!reporting/**/submissions/**/*.pdf
+!reporting/**/deliveries/**/*.pdf
 reporting/**/*.synctex.gz
 reporting/**/*.bbl
 reporting/**/*.blg
 reporting/**/*.nav
 reporting/**/*.snm
 reporting/**/*.toc
+# Every immutable snapshot component is durable. A nested DVC-generated
+# .gitignore still excludes DVC payload bytes while keeping its pointer.
+!reporting/**/submissions/**
+!reporting/**/deliveries/**
 
 # --- Docs build ---
 docs/_build/
@@ -69,3 +81,10 @@ container.sif
 
 # Run-registry lock (transient)
 metadata/.runs.csv.lock
+metadata/.runs.*.tmp
+metadata/provenance/.*.tmp
+
+# Delivery-freeze lock (transient). Staging directories are intentionally not
+# ignored: DVC must be able to inspect their payload paths, and a crash-leftover
+# stage should be visible to operators instead of being silently hidden.
+reporting/**/.deliveries.lock

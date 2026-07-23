@@ -1,30 +1,30 @@
-# AGENTS.md — `src/{{ package_name }}/` (library layer)
+# AGENTS.md — `src/`
 
-This is the pure, installable, tested library. Code here outlives the paper. Root
-`../AGENTS.md` still applies; these are the additional rules for library code.
+Root [`../AGENTS.md`](../AGENTS.md) applies. Human orientation is in
+[`README.md`](README.md).
 
-## Rules
-- **No I/O, no analysis orchestration here.** Reading files, writing figures, and
-  wiring stages belong in `workflow/`. This layer is functions on data in memory.
-- **Pure and small.** Functions ≤ 15 LOC (excluding docstrings). Prefer many small
-  composable functions over one large one.
-- **Typed.** `mypy --strict` must pass; every public function has type hints and a
-  numpydoc docstring (`interrogate` enforces coverage).
-- **Vectorize.** Delegate to idiomatic numpy/pandas/scipy; avoid hand-rolled loops
-  over arrays. Reach for numba only when profiling justifies it.
-- **`pathlib.Path` only** for paths (when a function must take one) — never `os.path`.
-- **Determinism.** Any stochastic function takes an explicit seed/`Generator`
-  argument; never reads a global RNG.
+## Additional constraints
 
-## Workflow (TDD, non-negotiable)
-Red → green → refactor. Write the failing test first.
+- Keep analysis kernels pure, small, typed, deterministic, and composable.
+- Named adapters (`catalog.py`, `settings.py`, or similarly explicit boundaries)
+  may read declared files/environment at call time. They may not do import-time
+  I/O, orchestrate stages, choose pipeline destinations, or write hidden output.
+- File writing and Snakemake adaptation belong in `workflow/scripts/`; deliberate
+  repository operations belong in top-level `scripts/`.
+- Public functions require strict type hints, numpydoc documentation, and tests.
+- Use `pathlib.Path`, explicit `numpy.random.Generator`/seed inputs, and idiomatic
+  NumPy/pandas/SciPy rather than implicit globals or hand-rolled array loops.
+
+## Validation
+
+Use test-driven changes for behavioral code. Run relevant unit/property tests,
+then the full quality gates proportionate to the task:
+
 ```bash
-pytest tests/ -q                 # unit tests
-pytest --hypothesis-show-statistics   # property-based tests on numeric kernels
+pytest tests/ -q
+pytest --hypothesis-show-statistics
+pre-commit run --all-files
 ```
-Coverage target: **≥ 90%** for pure functions. Critical math kernels get
-`hypothesis` property tests and are candidates for `mutmut` mutation testing.
 
-## Before you finish
-- New public function → test + docstring + type hints, or it's not done.
-- `pre-commit run --all-files` is green.
+Pure numerical kernels target at least 90% coverage. A public function without
+tests, types, and documentation is not complete.

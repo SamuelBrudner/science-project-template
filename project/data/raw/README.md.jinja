@@ -1,25 +1,26 @@
-# `data/raw/` — Raw data (IMMUTABLE)
+# `data/raw/` — Immutable acquired inputs
 
-Original, unmodified measurements. This is the ground truth everything else is
-derived from.
+## Authority
 
-**The one rule: never modify or delete anything in here.** Not to fix a typo, not
-to reformat, not to drop a bad sample. Raw stays raw. Corrections and exclusions
-happen downstream in the pipeline (`workflow/`) and are recorded in config, so
-they are visible, reversible, and reproducible.
+The root [`README.md`](../../README.md) contract governs this directory. The
+non-overridable raw-data rule in [`../AGENTS.md`](../AGENTS.md) applies.
 
-## What belongs here
-- Instrument output exactly as produced.
-- Files registered in a `metadata/` sample manifest.
+## Use this directory for
 
-## What does NOT belong here
-- Anything a script produced → `data/interim/` or `data/processed/`.
-- Cleaned, renamed, or reformatted copies → those are pipeline outputs.
+- Instrument output and externally acquired input exactly as received.
+- Real files registered by a validated manifest in `metadata/`.
 
-## Housekeeping
-- Tracked by **{{ data_versioning }}**, not git. Run `{{ data_versioning }} pull`
-  to populate. Never `git add` data files.
-- This folder is read-only by convention; the pipeline reads from it and writes
-  elsewhere.
+Payload bytes are tracked by {{ data_versioning }}, not Git. Each manifest-listed
+real file uses its adjacent `<filename>.dvc` pointer. Commit that pointer and the
+DVC-created `.gitignore` before running the pipeline; do not commit the payload
+itself. The DAG fails if the pointer is absent, modified, or uncommitted.
 
-See the sample manifest schema in [`../../metadata/`](../../metadata/).
+## Do not put here
+
+- Synthetic examples or test data → `tests/fixtures/`.
+- Reformatted or cleaned copies → `data/processed/` via a declared stage.
+- Same-run scratch → `data/interim/`.
+- Figures, tables, QC, exclusions, or provenance → `results/`.
+
+Never modify or delete a raw payload to fix a problem. Keep the original bytes
+and encode the correction as a visible, reversible transformation or exclusion.
