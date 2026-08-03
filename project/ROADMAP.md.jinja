@@ -1,0 +1,65 @@
+# {{ project_name }} roadmap
+
+This roadmap records durable milestones, entry criteria, exit gates, and
+revisit conditions. It deliberately does **not** record owners, current status,
+blockers, due dates, or task checklists; those are live operational state in
+`.beads/issues.jsonl`.
+
+## Governance
+
+Entry: repository ownership and the program boundary are named.
+
+Gate:
+
+- the placement contract, operating model, and initial ADRs are accepted;
+- every participating repository has one registered identity;
+- source-task cutovers have an auditable crosswalk; and
+- program Beads is the sole cross-repository status authority.
+
+## Shared instrument
+
+Entry: producer ownership, dataset identity, and representation contract are
+approved.
+
+Gate:
+
+- a registered dataset, configuration, source revision, and model identity
+  exist;
+- quality criteria and failure conditions were defined before evaluation; and
+- a smoke run produces a durable, hash-addressed artifact pointer.
+
+## Interface handoff
+
+Entry: the producer artifact is registered.
+
+Gate:
+
+- producer and consumer validate the same versioned fixture contract;
+- the consumer reads a durable URI without sibling imports or workstation paths;
+- compatibility records pin producer commit, consumer commit, schema digest,
+  and conformance result; and
+- failure fixtures reject every prohibited shape, type, time, or metadata state.
+
+## Claim tracks
+
+Entry: the shared instrument and handoff gates pass.
+
+Gate:
+
+- each claim track has a registered experiment with independent preregistered
+  gates, nulls/baselines, unit of analysis, and split semantics;
+- exploratory results cannot silently become confirmatory evidence; and
+- a valid negative result remains negative rather than triggering
+  representation selection without its own preregistered decision gate.
+
+## Confirmatory freeze
+
+Entry: all preregistered upstream gates pass.
+
+Gate:
+
+- exact inputs, source commits, outputs, QC verdict, and reporting dependencies
+  are registered;
+- confirmatory scope is frozen by a person; and
+- every public claim is traceable through immutable records to its owning
+  repository artifacts.

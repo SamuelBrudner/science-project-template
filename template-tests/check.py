@@ -3,7 +3,8 @@
 generated-project quality gate, so template claims are enforced, not eyeballed.
 
 Usage: python check.py /path/to/template [--fast] [preset ...]
-Presets: default minimal quoted mkdocs bsd latexspecial jupyter nbnone contracts special
+Presets: default minimal quoted mkdocs bsd latexspecial jupyter nbnone
+         program_control contracts special
          + rejection presets (weirdname badpkg bademail badorcid). Default: all.
 
 --fast skips notebook *kernel execution* in the docs build for quick local
@@ -28,6 +29,7 @@ import yaml
 # Importing the sibling contract module must not dirty the template checkout.
 sys.dont_write_bytecode = True
 from contracts import BEGIN_CONTRACT, run_contract_checks  # noqa: E402
+from program_control import run_program_control_checks  # noqa: E402
 
 # Each preset: data dict, plus optional "expect_render_fail" for invalid input.
 PRESETS: dict[str, dict] = {
@@ -2312,12 +2314,17 @@ def main() -> int:
         preset_args = args
     # Exhaustive documentation contracts and the expensive special lifecycle
     # probes are part of the default run, not opt-ins.
-    presets = preset_args or [*PRESETS, "contracts", "special"]
+    presets = preset_args or [*PRESETS, "program_control", "contracts", "special"]
     all_pass = True
     summary: dict[str, list] = {}
     for preset in presets:
         if preset == "special":
             res = special_checks(template)
+        elif preset == "program_control":
+            res = [
+                (name, "PASS" if ok else "FAIL", detail)
+                for name, ok, detail in run_program_control_checks(template)
+            ]
         elif preset == "contracts":
             res = documentation_contract_checks(template)
         else:

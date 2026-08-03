@@ -1,3 +1,37 @@
+{% if project_profile == "program_control" -%}
+# Contributing to {{ project_name }}
+
+## Setup
+
+```bash
+pre-commit install
+python scripts/validate_registry.py
+mkdocs build --strict
+```
+
+## Workflow
+
+- Read the marked Repository contract in [`README.md`](README.md); it is the
+  sole placement authority.
+- Read [`AGENTS.md`](AGENTS.md) and preserved local additions before editing.
+- Keep cross-repository live status in `.beads/issues.jsonl`, stable gates in
+  `ROADMAP.md`, accepted decisions in dated ADRs, and immutable identities in
+  one-record-per-file registry YAML.
+- Work on a topic branch and merge through a reviewed PR.
+- Never place scientific code or payloads in this repository.
+
+## Completion checklist
+
+- [ ] Every touched file has a canonical home in the root contract.
+- [ ] `python scripts/validate_registry.py` passes.
+- [ ] `pre-commit run --all-files` and `mkdocs build --strict` pass.
+- [ ] No database, daemon state, credential, local path, unresolved reference,
+      duplicate ID, cycle, payload, or compute surface was introduced.
+- [ ] Existing registered records are byte-unchanged; corrections use a new ID
+      and `supersedes`.
+- [ ] Human-gated decisions, registration, conformance, and external mutations
+      are accepted by a person or explicitly handed off as pending.
+{% else -%}
 # Contributing to {{ project_name }}
 
 ## Setup
@@ -48,3 +82,4 @@ If a committed `conda-lock.yml` exists, prefer
 
 The rationale behind the contract is in
 [`docs/structure.md`](docs/structure.md); it does not supersede the root matrix.
+{% endif -%}

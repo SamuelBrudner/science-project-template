@@ -1,3 +1,91 @@
+{% if project_profile == "program_control" -%}
+# {{ project_name }}
+
+> {{ project_description or "Scientific program control repository." }}
+>
+> **Profile:** program control · **Maintainer:** {{ author }}{% if orcid %} ([{{ orcid }}]({{ orcid }})){% endif %} · **License:** {{ license }}
+
+This private control plane coordinates work performed in independently governed
+producer and consumer repositories. It records program decisions, gates,
+cross-repository dependencies, immutable artifact identities, and interface
+compatibility. It does not contain or execute scientific algorithms.
+
+This README is the repository map and the **sole placement authority**. Read the
+marked contract before creating or moving a file. [`AGENTS.md`](AGENTS.md) owns
+agent permissions; [`AGENTS.local.md`](AGENTS.local.md) holds preserved local
+additions.
+
+## Quickstart
+
+```bash
+pre-commit install
+python scripts/validate_registry.py
+mkdocs build --strict
+```
+
+Initialize Beads with prefix `{{ registry_prefix }}` in JSONL-only/no-database
+mode. `.beads/issues.jsonl` remains the sole status authority; the CLI may also
+commit its declarative `config.yaml`, `metadata.json`, `README.md`, and
+`interactions.jsonl` support files. Databases, daemon/runtime state, sockets,
+locks, logs, and local absolute paths are prohibited.
+
+## Repository contract
+
+<!-- BEGIN REPOSITORY CONTRACT -->
+| Canonical home | Purpose | Author / owner | Storage | Lifecycle |
+| --- | --- | --- | --- | --- |
+| `README.md`, `AGENTS.md`, `AGENTS.local.md`, `CLAUDE.md` | Sole placement map, inherited agent policy, preserved local policy, and tool pointer. | Human or agent; authority changes reviewed | Git | Maintained |
+| `ROADMAP.md` | Stable milestones, scientific gates, and exit criteria only. Live status never belongs here. | Program leads; agents may draft | Git | Maintained |
+| `.beads/issues.jsonl` plus declarative CLI support files | Live cross-repository status, ownership, blockers, and dependency edges. `issues.jsonl` is the authority; `config.yaml`, `metadata.json`, `README.md`, and `interactions.jsonl` support no-database operation. | Program coordination workflow | Git, JSONL authority; no SQLite/daemon state | Mutable operational authority |
+| `docs/architecture.md` | Repository boundaries and durable interface topology. | Human or agent, reviewed | Git | Maintained |
+| `docs/operating-model.md` | Authority, decision, registry, and cutover procedures. | Human or agent, reviewed | Git | Maintained |
+| `docs/migration/` | Auditable one-time crosswalks from source task systems into program Beads. | Human-approved | Git | Durable |
+| `notes/decisions/YYYY-MM-DD-*.md` | Accepted architectural, scope, and scientific decision records. | Human accepts; agents may draft | Git | Append-only; supersede, do not rewrite |
+| `contracts/registry/v1/*.schema.json` | Versioned machine contracts for registry records. | Program governance, reviewed | Git | Immutable within a released schema version |
+| `metadata/registries/contracts/` | Approved interface contracts and producer/consumer conformance identities. | Program governance | Git YAML | Registered records immutable |
+| `metadata/registries/repositories/` | Governed repository identities and source revisions. | Program governance | Git YAML | Registered records immutable |
+| `metadata/registries/datasets/` | Dataset/cohort identities and manifests by digest; never payload bytes. | Owning producer repository; program approves identity | Git YAML | Registered records immutable |
+| `metadata/registries/encoders/` | Encoder configuration/checkpoint/code identities; never model payloads. | Owning producer repository; program approves identity | Git YAML | Registered records immutable |
+| `metadata/registries/exports/` | Durable export pointers, member manifests, and full hashes; never arrays. | Producer registers; consumer conformance attached | Git YAML | Registered records immutable |
+| `metadata/registries/experiments/` | Preregistered question, design, gates, and dependency identities. | Scientific lead | Git YAML | Registered records immutable |
+| `metadata/registries/runs/` | Smoke, exploratory, and confirmatory execution identities, splits, I/O, QC, and gates. | Owning compute repository; program registers | Git YAML | Registered records immutable |
+| `metadata/registries/resources/` | Durable non-secret cloud/resource identities and access pointers. | Resource owner | Git YAML | Registered records immutable |
+| `scripts/validate_registry.py` | Standalone schema, reference, cycle, secret/path, JSONL-only, and immutability validator. | Human or agent, reviewed | Git | Maintained |
+| `.github/`, `.pre-commit-config.yaml`, `.gitignore`, `.copier-answers.yml`, `mkdocs.yml` | CI, local quality gates, ignore policy, update state, and documentation build. | Human or tool; reviewed | Git | Maintained |
+| `docs/`, `CITATION.cff`, `codemeta.json`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` | Curated program documentation, identity metadata, legal terms, and collaboration policy. | Human or agent, reviewed | Git | Maintained |
+| Secrets, scientific code, data/model payloads, generated results, and local runtime state | Prohibited here. Keep them in their owning repository, durable object store, or ignored local environment as applicable. | Not applicable | Never Git content in this repository | Reject |
+<!-- END REPOSITORY CONTRACT -->
+
+If an artifact has no row, stop and amend this contract before placing it. Do
+not create a parallel tracker, roadmap status list, registry index, or
+“temporary” data directory.
+
+## Authority boundaries
+
+- Program Beads are the sole live authority for cross-repository work. Source
+  repositories retain their local implementation tasks.
+- `ROADMAP.md` defines durable gates; it never mirrors Beads status.
+- Dated ADRs record accepted decisions; they do not track implementation state.
+- Registry YAML records approved immutable identities and pointers. A correction
+  receives a new ID with `supersedes`; a registered file is never edited.
+- Producer and consumer repositories own all computation. This repository
+  approves contracts and compatibility records but never launches their jobs.
+
+## Hard boundaries
+
+No Git submodules, sibling source imports, pipeline launchers, scientific
+environments, notebooks, containers, acquired/derived data, model checkpoints,
+latent arrays, figures, or reports belong here. Registry records use durable
+URIs and full SHA-256 digests; they never use a workstation path or credential.
+
+## Contributing and citing
+
+- Operating model: [`docs/operating-model.md`](docs/operating-model.md)
+- Architecture: [`docs/architecture.md`](docs/architecture.md)
+- Stable gates: [`ROADMAP.md`](ROADMAP.md)
+- Collaboration workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Citation metadata: [`CITATION.cff`](CITATION.cff) and `codemeta.json`
+{% else -%}
 # {{ project_name }}
 
 > {{ project_description or "Research project." }}
@@ -201,3 +289,4 @@ rationale; it intentionally does not duplicate the placement contract above.
 - Setup and review workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Code of conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
 - Citation metadata: [`CITATION.cff`](CITATION.cff) and `codemeta.json`
+{% endif -%}
