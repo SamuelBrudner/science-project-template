@@ -54,6 +54,7 @@ jobs:
             pre-commit cffconvert \
             sphinx myst-nb furo numpydoc \
             mkdocs-material mkdocs-jupyter \
+            "PyYAML==6.0.2" "jsonschema==4.23.0" \
             black isort ruff mypy interrogate pillow
 
       - name: Certify template (all presets + special)
