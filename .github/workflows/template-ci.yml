@@ -45,17 +45,23 @@ jobs:
       # tools the harness itself invokes across all rendered projects.
       - name: Install render toolchain
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip pipx
           pip install \
             "setuptools>=68" wheel \
             "copier>=9" jinja2-time \
             "snakemake>=8" snakemake-executor-plugin-slurm \
             "dvc>=3,<4" \
-            pre-commit cffconvert \
+            pre-commit \
             sphinx myst-nb furo numpydoc \
             mkdocs-material mkdocs-jupyter \
             "PyYAML==6.0.2" "jsonschema==4.23.0" \
             black isort ruff mypy interrogate pillow
+          # cffconvert 2.0.0 pins jsonschema<4, while the program-control
+          # registry validator requires Draft 2020-12 from jsonschema 4.x.
+          # Isolate the CLI so both validators use their supported dependency
+          # sets instead of forcing pip into an unsatisfiable shared solve.
+          python -m pipx install cffconvert==2.0.0
+          echo "$(python -m site --user-base)/bin" >> "$GITHUB_PATH"
 
       - name: Certify template (all presets + special)
         run: python template-tests/check.py
