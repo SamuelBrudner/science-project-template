@@ -13,7 +13,9 @@ extensions = [
 numpydoc_show_class_members = False
 autodoc_typehints = "description"
 html_theme = "furo"
-exclude_patterns = ["_build"]
+# jupyter_execute is MyST-NB's executed-notebook artifact dir; excluding it
+# keeps repeat local builds warning-free under -W.
+exclude_patterns = ["_build", "jupyter_execute"]
 
 # MyST-NB: execute narrative notebooks/pages so they can't drift from the code.
 source_suffix = {".rst": "restructuredtext", ".md": "myst-nb"}

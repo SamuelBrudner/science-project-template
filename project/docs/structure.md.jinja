@@ -2,7 +2,7 @@
 
 This page explains **why** {{ project_name }} is organized this way. It is not a
 second path inventory. The marked Repository contract in the root
-[`README.md`](../README.md) is the sole placement authority; when this rationale
+`README.md` is the sole placement authority; when this rationale
 and that contract differ, the root contract wins.
 
 ## 1. Separate concerns by rate of change
@@ -77,6 +77,15 @@ human-accepted research decisions. Ordinary notes remain scratch.
 Mutable reporting sources assemble evidence for an audience. A delivery freezes
 exact payload bytes, figures, identifiers, and checksums only when a person
 approves sending/presenting them.
+
+The project hub (`docs/project-hub.md`) is deliberately none of these
+authorities. It is a maintained communication projection: a person curates a
+current summary and points each claim at its canonical record — the run
+ledger, decision records, bench records, deliveries — instead of restating
+them. Its "scientific content last reviewed" date is a human editorial fact,
+distinct from Git and build metadata, which record edits and builds rather
+than review. The hub updates by three-way merge on `copier update` like other
+maintained files; when the page and a record disagree, the record wins.
 
 ## 5. Agents operate under inherited, artifact-based completion
 

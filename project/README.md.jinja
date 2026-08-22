@@ -98,6 +98,9 @@ moving, or generating a file. Nested READMEs explain local practice but may not
 change this contract. Agent permissions and escalation rules live in
 [`AGENTS.md`](AGENTS.md).
 
+Current scientific status, recent changes, and pointers to every canonical
+record start at the **[Project hub](docs/project-hub.md)** — a maintained
+projection with its own human-updated review date, never an authority.
 Scientific background and maintained tutorials belong in [`docs/`](docs/).
 Exact reproduction commands are in [`REPRODUCE.md`](REPRODUCE.md).
 
@@ -170,7 +173,8 @@ are committed.
 | `notes/` | Non-load-bearing meeting, reading, and idea scratch; accepted decisions use `notes/decisions/` only when Lab Tracker is disabled. | Human-owned; agents may assist | Git | Informal |
 | `reporting/` | Mutable sources for papers, posters, presentations, and writeups, plus immutable delivery snapshots. Working builds such as PDFs remain generated. | Human-owned; agents draft for review | Source/small authored inputs in Git; working builds ignored; delivery bytes in Git through 1 MiB or DVC above it | Drafts evolve; deliveries freeze |
 | `assets/figures/` | Non-regenerable authored schematics and editable source, with source metadata. | Human-authored | Git up to 1 MiB; otherwise DVC at the same logical path | Durable input |
-| `docs/` and `mkdocs.yml` | Curated public documentation, executed narrative tutorials, and documentation-backend configuration. | Human or agent, reviewed | Git | Maintained |
+| `docs/` except `project-hub.md`, and `mkdocs.yml` | Curated project documentation, executed narrative tutorials, and documentation-backend configuration. | Human or agent, reviewed | Git | Maintained |
+| `docs/project-hub.md` | Living project hub: current scientific status, recent changes, near-term intent, open decisions, and pointers to canonical records, with a human-maintained "scientific content last reviewed" date. Never an authority; on disagreement the linked record wins. | Human-owned; agents draft updates for review | Git | Maintained projection |
 | `tests/` and `tests/fixtures/` | Automated checks and small synthetic fixtures only. | Human or agent | Git | Maintained |
 | Temporary files and caches | Transient local state such as `.snakemake/`, build trees, locks, and editor files. Delivery staging directories are deliberately visible so DVC can inspect them and crash leftovers cannot hide. | Tools | Ignored except visible delivery staging | Delete when safe; never deliver |
 <!-- END REPOSITORY CONTRACT -->

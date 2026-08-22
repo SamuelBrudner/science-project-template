@@ -1,0 +1,74 @@
+# Project hub — {{ project_name }}
+
+> **Scientific content last reviewed:** {% now 'utc', '%Y-%m-%d' %}
+>
+> A person updates the date above only after re-reading this page and
+> confirming the science it summarizes is still believed. That date is
+> deliberately distinct from Git commit timestamps and documentation build
+> times, which record mechanical edits and builds, not scientific review.
+
+This page is the living landing page for **{{ project_name }}**: current
+scientific status, recent changes, and pointers to the canonical records. It
+is a maintained communication projection, not an authority. It does not
+replace the placement contract in the root `README.md`, executed bench facts,
+accepted research decisions, the run ledger `metadata/runs.csv` and the
+immutable archives under `metadata/provenance/`, current generated outputs
+under `results/`, or frozen deliveries governed by `reporting/DELIVERIES.md`.
+When this page and a canonical record disagree, the record wins — fix this
+page.
+
+## Overview and guiding questions
+
+{{ project_description or "Describe what this project asks and why it matters." }}
+
+_Replace this stub with the scientific framing: the driving questions and why
+they matter._
+
+## Current status / provisional answer
+
+_What is currently believed, stated as a provisional answer with its main
+caveat. Prose only; link evidence rather than restating it._
+
+## What changed recently
+
+Newest first; date every entry. Reference registered executions by their
+execution ID from the run ledger and decisions by their records — link or
+name, never restate.
+
+- {% now 'utc', '%Y-%m-%d' %} — project generated from the template.
+
+## Current evidence and artifacts
+
+Generated figures and tables under `results/` are disposable build outputs —
+regenerate them with the commands in `REPRODUCE.md` rather than trusting stale
+copies. Cite frozen evidence from delivery snapshots (see
+`reporting/DELIVERIES.md`); human interpretation of registered executions
+lives in `reporting/writeups/LAB_NOTEBOOK.md`.
+
+## Open decisions, risks, and blockers
+
+Orientation only — this page is not a tracker and holds no task status.
+{% if use_lab_tracker %}Accepted questions, claims, and decisions live in
+Lab Tracker{% if lab_tracker_project_id %} (project `{{ lab_tracker_project_id }}`){% else %}
+— **project link unconfigured**; do not guess a project ID{% endif %};
+keep only pointers and open items here.
+{%- else %}Accepted decisions live as dated records under `notes/decisions/`;
+keep only pointers and open items here.
+{%- endif %}
+
+## Near-term work and milestones
+
+_A short prose summary of the next scientific steps, for orientation. It
+confers no status authority._
+
+## Canonical records and methods
+
+- Repository map and placement contract: the root `README.md`
+- Exact reproduction commands: `REPRODUCE.md`
+- Design rationale: [structure](structure.md)
+- Executed tutorial: {% if docs_backend == "sphinx" %}[tutorial](tutorial.md){% else %}[tutorial](tutorial.ipynb){% endif %}
+- Run ledger: `metadata/runs.csv`; immutable manifests under `metadata/provenance/`
+- Interpretation notebook: `reporting/writeups/LAB_NOTEBOOK.md`
+- Delivery contract: `reporting/DELIVERIES.md`
+- Bench records: {% if bench_record_authority == "eln" %}{% if bench_record_location %}the ELN at `{{ bench_record_location }}`{% else %}the ELN — location unconfigured; do not guess (see `lab/README.md`){% endif %}{% else %}`lab/records/` (see `lab/README.md`){% endif %}
+- Continuous integration: `.github/workflows/ci.yml`
