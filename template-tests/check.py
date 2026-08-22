@@ -590,9 +590,28 @@ def check_preset(template: Path, preset: str, spec: dict) -> list:
                 results, "docs_build", False, "sphinx-build REQUIRED but not installed"
             )
         else:
-            cmd = ["sphinx-build", "-q", "-b", "html", "docs", "docs/_build"]
+            # Mirror generated CI exactly: warnings are fatal (-W), matching
+            # the research workflow's `sphinx-build -W --keep-going`.
+            cmd = [
+                "sphinx-build",
+                "-W",
+                "--keep-going",
+                "-q",
+                "-b",
+                "html",
+                "docs",
+                "docs/_build",
+            ]
             if FAST:  # build the page but don't run the tutorial's cells
-                cmd += ["-D", "nb_execution_mode=off"]
+                # Unexecuted notebooks carry no lexer metadata, so myst-nb
+                # emits benign lexer warnings only in this no-exec probe.
+                # The full (executed) build keeps every warning fatal.
+                cmd += [
+                    "-D",
+                    "nb_execution_mode=off",
+                    "-D",
+                    "suppress_warnings=myst-nb.lexer",
+                ]
             code, out = run(cmd, dest, env)
             label = "docs_build(fast:no-exec)" if FAST else "docs_build"
             gate(results, label, code == 0, out)
@@ -607,7 +626,8 @@ def check_preset(template: Path, preset: str, spec: dict) -> list:
         elif not have("mkdocs"):
             gate(results, "docs_build", False, "mkdocs REQUIRED but not installed")
         else:
-            code, out = run(["mkdocs", "build", "-q"], dest, env)
+            # Mirror generated CI exactly: `mkdocs build --strict`.
+            code, out = run(["mkdocs", "build", "-q", "--strict"], dest, env)
             gate(results, "docs_build", code == 0, out)
     else:
         gate(results, "docs_build", False, "no docs backend rendered (bug)")
@@ -901,9 +921,12 @@ def special_checks(template: Path) -> list:
         proj,
         env,
     )
-    landed = (proj / "metadata/AGENTS.md").exists() and BEGIN_CONTRACT in (
-        proj / "README.md"
-    ).read_text()
+    landed = (
+        (proj / "metadata/AGENTS.md").exists()
+        and BEGIN_CONTRACT in (proj / "README.md").read_text()
+        # The project hub is new template surface: an update must deliver it.
+        and (proj / "docs/project-hub.md").is_file()
+    )
     # No unmerged files in the GIT INDEX (stronger than a text scan), and no
     # conflict markers on disk.
     idx_code, idx_out = run(["git", "ls-files", "-u"], proj, env)

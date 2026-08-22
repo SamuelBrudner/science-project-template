@@ -82,6 +82,7 @@ CANONICAL_HOMES = (
     "assets/figures/",
     "conf/theme/",
     "reporting/_assets/theme-colors*.tex",
+    "docs/project-hub.md",
 )
 
 EXPECTED_NESTED_AGENTS = (
@@ -484,6 +485,7 @@ def _check_conditional_inventory(destination: Path, data: dict[str, str]) -> lis
         "workflow/rules/provenance.smk",
         "workflow/scripts/provenance.py",
         "results/README.md",
+        "docs/project-hub.md",
     ):
         _expect_path(destination, relative, True, errors)
     _expect_path(destination, "lab/records/README.md", False, errors)
@@ -541,6 +543,80 @@ def _check_conditional_inventory(destination: Path, data: dict[str, str]) -> lis
             "generated CI sample-manifest validation does not match "
             f"include_example={data['include_example']}"
         )
+    ci_builds_sphinx = "sphinx-build -W" in ci_text
+    ci_builds_mkdocs = "mkdocs build --strict" in ci_text
+    if ci_builds_sphinx != sphinx or ci_builds_mkdocs == sphinx:
+        errors.append(
+            "generated CI must build the selected docs backend strictly "
+            f"(docs_backend={data['docs_backend']})"
+        )
+    return errors
+
+
+def _check_project_hub(destination: Path, data: dict[str, str]) -> list[str]:
+    """The hub is a maintained projection: present, linked, dated, never an authority."""
+    errors: list[str] = []
+    hub_path = destination / "docs/project-hub.md"
+    if not hub_path.exists():
+        return ["docs/project-hub.md is missing"]
+    hub = hub_path.read_text()
+    hub_fold = hub.casefold()
+    sphinx = data["docs_backend"] == "sphinx"
+    tracker = data["use_lab_tracker"] == "true"
+
+    for phrase in ("projection, not an authority", "the record wins"):
+        if phrase not in hub_fold:
+            errors.append(f"hub is missing the non-authority phrase {phrase!r}")
+    if not re.search(r"Scientific content last reviewed:.*\d{4}-\d{2}-\d{2}", hub):
+        errors.append("hub is missing a dated 'Scientific content last reviewed' line")
+    if "distinct from git" not in hub_fold:
+        errors.append("hub must distinguish its review date from Git/build metadata")
+    if "| Canonical home |" in hub:
+        errors.append("hub must not duplicate the placement matrix")
+
+    readme = (destination / "README.md").read_text()
+    link_at = readme.find("(docs/project-hub.md)")
+    contract_at = readme.find(BEGIN_CONTRACT)
+    if link_at == -1 or (contract_at != -1 and link_at > contract_at):
+        errors.append("README must link docs/project-hub.md above the contract block")
+
+    # Backend files are conditionally rendered; a missing one is reported
+    # tidily here (and by conditional_inventory) instead of crashing the run.
+    if sphinx:
+        toctree_path = destination / "docs/index.rst"
+        if not toctree_path.exists():
+            errors.append("docs/index.rst is missing for the sphinx backend")
+        elif not re.search(r"(?m)^\s+project-hub\s*$", toctree_path.read_text()):
+            errors.append("docs/index.rst toctree must include project-hub")
+    else:
+        nav_path = destination / "mkdocs.yml"
+        if not nav_path.exists():
+            errors.append("mkdocs.yml is missing for the mkdocs backend")
+        elif "project-hub.md" not in nav_path.read_text():
+            errors.append("mkdocs.yml nav must include project-hub.md")
+
+    publish_surfaces = {".github/workflows/ci.yml"}
+    if not sphinx:
+        publish_surfaces.add("mkdocs.yml")
+    for relative in sorted(publish_surfaces):
+        surface = destination / relative
+        if not surface.exists():
+            continue  # absence is reported above / by conditional_inventory
+        text = surface.read_text()
+        for marker in ("gh-deploy", "gh-pages", "deploy-pages"):
+            if marker in text:
+                errors.append(f"{relative} must not publish docs ({marker})")
+
+    decisions_section = hub.split("## Open decisions", 1)[-1].split("\n## ", 1)[0]
+    if tracker:
+        if "Lab Tracker" not in decisions_section:
+            errors.append("tracker-enabled hub must point decisions at Lab Tracker")
+        if "notes/decisions" in decisions_section:
+            errors.append(
+                "tracker-enabled hub must not present notes/decisions as decision home"
+            )
+    elif "notes/decisions" not in decisions_section:
+        errors.append("tracker-disabled hub must point decisions at notes/decisions/")
     return errors
 
 
@@ -578,6 +654,7 @@ def _validate_render(destination: Path, data: dict[str, str]) -> dict[str, list[
     errors["conditional_inventory"].extend(
         _check_conditional_inventory(destination, data)
     )
+    errors["project_hub_contract"].extend(_check_project_hub(destination, data))
     errors["retired_paths_absent"].extend(_check_forbidden_promises(texts, destination))
     return errors
 
@@ -714,6 +791,8 @@ def _check_targeted_states(source: Path, work: Path) -> dict[str, list[str]]:
             if path.is_file()
         )
         root_agents = (destination / "AGENTS.md").read_text()
+        hub_path = destination / "docs/project-hub.md"
+        hub = hub_path.read_text() if hub_path.exists() else ""
         if label == "bench_eln_blank":
             if _answers_value(answers, "bench_record_authority") != "eln":
                 errors["bench_authority_states"].append(
@@ -729,11 +808,19 @@ def _check_targeted_states(source: Path, work: Path) -> dict[str, list[str]]:
                 errors["bench_authority_states"].append(
                     "lab/records rendered while the ELN is authoritative"
                 )
+            if "unconfigured" not in hub.casefold():
+                errors["bench_authority_states"].append(
+                    "blank ELN locator must be explicit in the project hub"
+                )
         elif label == "bench_eln_linked":
             location = data["bench_record_location"]
             if location not in lab_docs:
                 errors["bench_authority_states"].append(
                     "configured ELN locator is absent from lab guidance"
+                )
+            if location not in hub:
+                errors["bench_authority_states"].append(
+                    "configured ELN locator is absent from the project hub"
                 )
         elif label == "bench_repository":
             if _answers_value(answers, "bench_record_authority") != "repository":
@@ -748,6 +835,10 @@ def _check_targeted_states(source: Path, work: Path) -> dict[str, list[str]]:
                 errors["bench_authority_states"].append(
                     "repository authority is absent from lab guidance"
                 )
+            if "lab/records/" not in hub:
+                errors["bench_authority_states"].append(
+                    "repository bench authority is absent from the project hub"
+                )
         elif label == "tracker_disabled":
             if "## Lab Tracker" in root_agents:
                 errors["lab_tracker_id_states"].append(
@@ -761,12 +852,19 @@ def _check_targeted_states(source: Path, work: Path) -> dict[str, list[str]]:
                 errors["lab_tracker_id_states"].append(
                     "blank Lab Tracker ID must be explicit and prohibit guessing"
                 )
-        elif label == "tracker_linked" and data["lab_tracker_project_id"] not in (
-            root_agents
-        ):
-            errors["lab_tracker_id_states"].append(
-                "configured Lab Tracker project ID is absent from AGENTS.md"
-            )
+            if "unconfigured" not in hub.casefold() or "guess" not in hub.casefold():
+                errors["lab_tracker_id_states"].append(
+                    "blank Lab Tracker ID must be explicit in the project hub"
+                )
+        elif label == "tracker_linked":
+            if data["lab_tracker_project_id"] not in root_agents:
+                errors["lab_tracker_id_states"].append(
+                    "configured Lab Tracker project ID is absent from AGENTS.md"
+                )
+            if data["lab_tracker_project_id"] not in hub:
+                errors["lab_tracker_id_states"].append(
+                    "configured Lab Tracker project ID is absent from the project hub"
+                )
     return errors
 
 
@@ -848,6 +946,7 @@ def run_contract_checks(template: Path) -> list[tuple[str, bool, str]]:
         "placement_matrix",
         "agents_inheritance",
         "conditional_inventory",
+        "project_hub_contract",
         "copy_message_conditionals",
         "retired_paths_absent",
         "storage_git_policy",

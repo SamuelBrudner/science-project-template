@@ -3,19 +3,29 @@
 
 {{ project_description }}
 
-This site documents the program control plane. The marked Repository contract
-in the root `README.md` is the sole placement authority.
+This site documents the program control plane. This page is also the
+program's project hub: a links-only orientation surface. It carries no status
+prose and no review date — live cross-repository status has exactly one
+authority (`.beads/issues.jsonl`), and durable gates live in the root
+`ROADMAP.md`. The marked Repository contract in the root `README.md` is the
+sole placement authority.
 
 - [Architecture](architecture.md) defines repository and interface boundaries.
 - [Operating model](operating-model.md) defines authorities, immutable registry
   workflow, and cross-repository coordination.
 - The root `ROADMAP.md` defines stable milestones and gates.
+- Accepted decisions live as dated ADRs under `notes/decisions/`.
+- Registered records live under `metadata/registries/`; governance checks run
+  in `.github/workflows/ci.yml`.
 {% else -%}
 # {{ project_name }}
 
 {{ project_description }}
 
-The root [Repository contract](../README.md#repository-contract) is the canonical
+Start at the [Project hub](project-hub.md) for current scientific status,
+recent changes, and pointers to every canonical record.
+
+The marked Repository contract in the root `README.md` is the canonical
 placement map. [Structure](structure.md) explains the design rationale without
 duplicating that contract.
 {% endif -%}

@@ -1,5 +1,7 @@
+{#- East Asian characters render double-width; doubling the underline keeps
+    docutils satisfied for any title under sphinx-build -W. Longer is legal. -#}
 {{ project_name }}
-{{ "=" * project_name|length }}
+{{ "=" * (project_name|length * 2) }}
 
 {{ project_description }}
 
@@ -10,6 +12,7 @@ The root ``README.md`` Repository contract is the canonical placement map.
    :maxdepth: 2
    :caption: Contents
 
+   project-hub
    structure
    tutorial
 

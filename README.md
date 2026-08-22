@@ -34,7 +34,7 @@ documentation backend to MkDocs.
 For a noninteractive control repository:
 
 ```bash
-copier copy --trust --vcs-ref=v0.3.0 \
+copier copy --trust --vcs-ref=v0.4.0 \
   --data project_profile=program_control \
   --data registry_prefix=vdp \
   gh:SamuelBrudner/science-project-template path/to/program-control
@@ -58,7 +58,7 @@ AGENTS guardrails) propagate into already-generated repos via a merge.
 > **Publish as a tagged Git repository, not as a ZIP.** A plain archive carries no
 > Git history, so Copier records version `None`, cannot compute update ancestry, and
 > `copier update` won't work for anyone who generated from it. To publish: `git init`
-> → commit → `git tag v0.3.0` (or the next release; see `CHANGELOG.md`) → push to the Git
+> → commit → `git tag v0.4.0` (or the next release; see `CHANGELOG.md`) → push to the Git
 > host, then generate with `gh:SamuelBrudner/science-project-template`. Any ZIP of this
 > template is a review/inspection artifact only.
 
@@ -81,7 +81,9 @@ authority.
 Research:
 
 Snakemake (end-to-end) · Hydra + Pydantic configs wired into the DAG · DVC ·
-Apptainer on HPC · Sphinx+numpydoc docs · LaTeX papers (shared `lab.cls`) + Beamer
+Apptainer on HPC · Sphinx+numpydoc docs built strictly in CI · living
+`docs/project-hub.md` status projection with a human-maintained review date ·
+LaTeX papers (shared `lab.cls`) + Beamer
 slides (own class; sharing the font policy + theme colours) · strict theme
 validation with a light-vs-dark pixel-diff test ·
 colorblind-safe Okabe-Ito palette · gitleaks + commitizen · pydantic-settings

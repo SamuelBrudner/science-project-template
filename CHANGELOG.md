@@ -4,6 +4,51 @@ All notable changes to this Copier template are documented here. This is the
 template's own changelog; generated projects manage their own versions with
 `cz bump`.
 
+## v0.4.0 — Project hub living docs
+
+This release gives research renders a stable, GitHub-rendered landing page for
+"where does this project stand" without creating any new authority, and makes
+generated research CI build the selected documentation backend strictly.
+
+Highlights:
+
+- Adds `docs/project-hub.md` to every research render: current scientific
+  status, recent changes, near-term intent, open decisions, and pointers to
+  canonical records, under a human-maintained "scientific content last
+  reviewed" date that is explicitly distinct from Git and build metadata.
+- Declares the hub a maintained communication projection in the repository
+  contract (new "Maintained projection" lifecycle row): it points at the run
+  ledger, decision records, bench records, and deliveries instead of restating
+  them; when the page and a canonical record disagree, the record wins.
+- Links the hub prominently from the generated root README and includes it in
+  both Sphinx and MkDocs navigation.
+- Research CI now builds the selected docs backend strictly
+  (`sphinx-build -W --keep-going` / `mkdocs build --strict`). Cross-tree
+  references in docs pages became code-spans so strict builds stay green,
+  MyST-NB's `jupyter_execute/` artifact directory is excluded and gitignored,
+  and the Sphinx index underline now survives double-width (CJK) titles. No
+  Pages workflow or public deployment is introduced.
+- Program-control repositories deliberately ship no separate hub: their MkDocs
+  landing page (`docs/index.md`) is documented as the links-only hub
+  equivalent, and `docs/operating-model.md` records that decision.
+- Extends the harness: a `project_hub_contract` category across the 96-case
+  matrix, strict-CI and navigation assertions, blank/configured
+  authority-state hub checks, hub-arrival checks in both genuine update
+  migrations, and a release-anchored research parity gate with explicit,
+  emptied-on-re-anchor drift allowlists.
+
+### Updating from v0.3.0
+
+Run `copier update --trust` on a clean topic branch. The hub arrives on update
+and is deliberately **not** Copier-preserved: like the root README it
+three-way merges on later updates, so template improvements propagate and
+your edits are kept, with conflicts surfacing in the merge. If you already
+created a `docs/project-hub.md` by hand, review that merge carefully.
+Research CI now fails on documentation warnings; projects with locally
+modified docs may need to clear warnings once. Program-control repositories
+gain only the hub-role wording on `docs/index.md` and
+`docs/operating-model.md`.
+
 ## v0.3.0 — Program-control profile
 
 This release adds a second, deliberately non-computational Copier profile while

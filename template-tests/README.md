@@ -10,7 +10,9 @@ working-tree `copier update`, provenance staleness, and durable run registration
 combinations of the original compute, container, docs, notebook, example, and Lab
 Tracker axes, then checks links and anchors, referenced command paths, unresolved
 Jinja, the canonical placement matrix, additive `AGENTS.md` inheritance,
-conditional files/messages, retired path promises, and `git check-ignore`
+conditional files/messages, the project-hub contract (`project_hub_contract`:
+presence, README link, nav entries, strict CI docs build, review date, and
+non-authority phrasing), retired path promises, and `git check-ignore`
 storage policy. Targeted renders cover bench-record authority/locator states and
 blank, configured, and disabled Lab Tracker linkage without multiplying the full
 matrix.
@@ -18,9 +20,11 @@ matrix.
 `program_control.py` is the focused second-profile gate. It proves the render
 contains the governance/registry surface and none of the research compute/data
 surface, exercises valid and invalid registry state plus registered-record
-immutability, compares default research output with `v0.2.0`, performs a genuine
-`v0.2.0` → `v0.3.0` research update, and proves a control-profile update does
-not reintroduce excluded paths or overwrite JSONL/registry state.
+immutability, compares default research output with the anchored release tag
+(`RESEARCH_PARITY_TAG`, with explicit allowlists naming intentional drift that
+are emptied at each re-anchor), performs a genuine `v0.2.0` → worktree research
+update, and proves a control-profile update does not reintroduce excluded paths
+or overwrite JSONL/registry state.
 
 It lives at the **template root** — outside `project/` (the `_subdirectory` Copier
 renders) — so it ships and runs with the published template but is never copied

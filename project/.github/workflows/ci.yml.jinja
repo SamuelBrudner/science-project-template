@@ -122,4 +122,14 @@ jobs:
           # exclusion path is exercised (non-empty excluded list).
           python -c "import json; ex=json.load(open('results/qc/excluded_samples.json')); assert ex, 'expected excluded samples'; print('excluded:', ex)"
 {%- endif %}
+
+      # Docs are part of the reviewed surface: build the selected backend with
+      # warnings fatal so a missing page, broken toctree/nav, or failing
+      # executed tutorial fails CI. Built HTML is discarded — nothing deploys.
+      - name: Build documentation ({{ docs_backend }})
+{%- if docs_backend == "sphinx" %}
+        run: sphinx-build -W --keep-going -b html docs docs/_build
+{%- else %}
+        run: mkdocs build --strict
+{%- endif %}
 {% endif -%}

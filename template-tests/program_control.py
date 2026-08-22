@@ -45,6 +45,7 @@ FORBIDDEN = {
     "conf",
     "containers",
     "data",
+    "docs/project-hub.md",
     "environment.yml",
     "exploratory",
     "funding.yaml",
@@ -55,6 +56,21 @@ FORBIDDEN = {
     "src",
     "tests",
     "workflow",
+}
+
+# Intentional research-surface drift since RESEARCH_PARITY_TAG. The parity
+# gate below fails on ANY unlisted addition, removal, or byte change, so
+# accidental drift still hard-fails. Empty both sets when the next release
+# re-anchors RESEARCH_PARITY_TAG.
+RESEARCH_PARITY_TAG = "v0.3.0"
+RESEARCH_PARITY_ADDED = {"docs/project-hub.md"}
+RESEARCH_PARITY_CHANGED = {
+    ".github/workflows/ci.yml",  # strict docs-build step
+    ".gitignore",  # docs/jupyter_execute/ build artifact
+    "README.md",  # hub link + contract row + docs-row wording
+    "docs/conf.py",  # exclude jupyter_execute from sources
+    "docs/index.rst",  # project-hub toctree entry
+    "docs/structure.md",  # projection rationale + strict-safe README mention
 }
 REQUIRED_FILES = {
     ".beads/issues.jsonl",
@@ -239,6 +255,28 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
         else:
             docs_code, docs_output = 127, "mkdocs is required for profile certification"
         results.append(_result("program_docs_build", docs_code == 0, docs_output))
+
+        # The control plane adapts its existing MkDocs landing page as its
+        # project hub: a links-only orientation surface with no status prose,
+        # no review date, and no separate hub page (live status stays in
+        # Beads; the decision is recorded in docs/operating-model.md).
+        program_index = (destination / "docs/index.md").read_text()
+        operating_model = (destination / "docs/operating-model.md").read_text()
+        hub_landing_ok = (
+            "project hub" in program_index.casefold()
+            and "last reviewed" not in program_index.casefold()
+            and "project hub" in operating_model.casefold()
+            and not (destination / "docs/project-hub.md").exists()
+        )
+        results.append(
+            _result(
+                "program_hub_landing",
+                hub_landing_ok,
+                "docs/index.md must serve as the links-only project hub, carry "
+                "no review date, and ship no separate docs/project-hub.md; "
+                "docs/operating-model.md must record the decision",
+            )
+        )
 
         compile_code, compile_output = _run(
             [sys.executable, "-m", "py_compile", "scripts/validate_registry.py"],
@@ -431,13 +469,14 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
     finally:
         snapshot.cleanup()
 
-    # Default research output must match v0.2.0 byte-for-byte except for Copier's
-    # answer file, which necessarily gains the explicit default profile.
+    # Default research output must match the anchor release byte-for-byte
+    # except for Copier's answer file and the explicitly allowlisted
+    # intentional drift in RESEARCH_PARITY_ADDED / RESEARCH_PARITY_CHANGED.
     parity_root = Path(tempfile.mkdtemp(prefix="program_research_parity_"))
     old_destination = parity_root / "old"
     current_destination = parity_root / "current"
     old_code, old_output = _render(
-        template, old_destination, RESEARCH_DATA, vcs_ref="v0.2.0"
+        template, old_destination, RESEARCH_DATA, vcs_ref=RESEARCH_PARITY_TAG
     )
     current_snapshot, current_source = _snapshot(template)
     try:
@@ -463,13 +502,15 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
         parity_ok = (
             old_code == 0
             and current_code == 0
-            and old_files == current_files
-            and not differing
+            and not (old_files - current_files)
+            and (current_files - old_files) == RESEARCH_PARITY_ADDED
+            and set(differing) == RESEARCH_PARITY_CHANGED
         )
         results.append(
             _result(
-                "research_v020_parity",
+                "research_release_parity",
                 parity_ok,
+                f"anchor={RESEARCH_PARITY_TAG} "
                 f"old_only={sorted(old_files-current_files)} "
                 f"current_only={sorted(current_files-old_files)} "
                 f"differing={differing}\n{old_output}{current_output}",
@@ -520,6 +561,7 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
         updated_answers = yaml.safe_load(
             (research_project / ".copier-answers.yml").read_text()
         )
+        hub_after_update = research_project / "docs/project-hub.md"
         research_update_ok = (
             update_code == 0
             and updated_answers.get("project_profile") == "research"
@@ -528,6 +570,8 @@ def run_program_control_checks(template: Path) -> list[tuple[str, bool, str]]:
             and not (research_project / "ROADMAP.md").exists()
             and local_policy.read_text() == "# Local policy\n\nPreserve this rule.\n"
             and decision.read_text() == "# Accepted decision\n\nPreserve this record.\n"
+            and hub_after_update.is_file()
+            and "last reviewed" in hub_after_update.read_text().casefold()
         )
         research_update_detail = update_output
     else:

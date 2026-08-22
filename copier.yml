@@ -105,6 +105,9 @@ _exclude:
   - "{% if project_profile == 'program_control' %}workflow/**{% endif %}"
   - "{% if project_profile == 'program_control' %}docs/conf.py{% endif %}"
   - "{% if project_profile == 'program_control' %}docs/index.rst{% endif %}"
+  # The control plane keeps no living status page: docs/index.md serves the
+  # links-only project-hub role there (see docs/operating-model.md).
+  - "{% if project_profile == 'program_control' %}docs/project-hub.md{% endif %}"
   - "{% if project_profile == 'program_control' %}docs/structure.md{% endif %}"
   - "{% if project_profile == 'program_control' %}docs/tutorial.ipynb{% endif %}"
   - "{% if project_profile == 'program_control' %}docs/tutorial.md{% endif %}"
@@ -190,7 +193,8 @@ _message_after_copy: |
 
   For a byte-reproducible release/container, additionally commit a lock:
     conda-lock lock --file environment.yml -p linux-64 -p osx-arm64   # -> conda-lock.yml
-  Read docs/structure.md for the why behind this layout.
+  Read docs/structure.md for the why behind this layout. Orient collaborators
+  from docs/project-hub.md and keep its review date honest.
   {% endif %}
 
 # ---------------------------------------------------------------------------
